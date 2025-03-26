@@ -1,8 +1,6 @@
 
 import React from "react";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Separator } from "@/components/ui/separator";
-import { cn } from "@/lib/utils";
+import { Card, CardContent, CardHeader, Typography, Box, Grid, Paper } from "@mui/material";
 import { ConfusionMatrixData } from "@/types";
 
 interface ConfusionMatrixProps {
@@ -32,82 +30,157 @@ const ConfusionMatrix: React.FC<ConfusionMatrixProps> = ({
   const f1Score = (2 * TP / (2 * TP + FP + FN) * 100).toFixed(1);
 
   return (
-    <Card className={cn("overflow-hidden transition-custom animate-fade-up", className)}>
-      <CardHeader className="pb-2">
-        <CardTitle className="text-lg font-medium">Confusion Matrix</CardTitle>
-      </CardHeader>
+    <Card className={className} sx={{ overflow: "hidden", transition: "all 0.3s" }}>
+      <CardHeader 
+        title={<Typography variant="h6">Confusion Matrix</Typography>}
+        sx={{ pb: 1 }}
+      />
       <CardContent>
-        <div className={cn("transition-opacity duration-300", {
-          "opacity-50": isLoading
-        })}>
-          <div className="grid grid-cols-2 border border-border rounded-lg overflow-hidden">
+        <Box sx={{ opacity: isLoading ? 0.5 : 1, transition: "opacity 0.3s" }}>
+          <Paper variant="outlined" sx={{ overflow: "hidden", mb: 2 }}>
             {/* Header Row */}
-            <div className="col-span-2 grid grid-cols-2 text-xs text-center py-2 bg-muted/50">
-              <div className="col-span-1"></div>
-              <div className="grid grid-cols-2">
-                <div>Predicted Positive</div>
-                <div>Predicted Negative</div>
-              </div>
-            </div>
-            
-            {/* True Positive and False Negative */}
-            <div className="grid grid-cols-3 border-t border-border">
-              <div className="col-span-1 flex items-center justify-center bg-muted/50 text-xs py-3 px-2">
-                <div className="-rotate-90 whitespace-nowrap">Actual Positive</div>
-              </div>
-              <div className="col-span-2 grid grid-cols-2">
-                <div className="p-4 border-l border-r border-border flex flex-col justify-between items-center">
-                  <div className="text-sm font-medium">True Positive</div>
-                  <div className="text-2xl font-semibold">{TP}</div>
-                  <div className="text-xs text-muted-foreground">{tpPercent}%</div>
-                </div>
-                <div className="p-4 flex flex-col justify-between items-center">
-                  <div className="text-sm font-medium">False Negative</div>
-                  <div className="text-2xl font-semibold">{FN}</div>
-                  <div className="text-xs text-muted-foreground">{fnPercent}%</div>
-                </div>
-              </div>
-            </div>
-            
-            {/* False Positive and True Negative */}
-            <div className="grid grid-cols-3 border-t border-border">
-              <div className="col-span-1 flex items-center justify-center bg-muted/50 text-xs py-3 px-2">
-                <div className="-rotate-90 whitespace-nowrap">Actual Negative</div>
-              </div>
-              <div className="col-span-2 grid grid-cols-2">
-                <div className="p-4 border-l border-r border-border flex flex-col justify-between items-center">
-                  <div className="text-sm font-medium">False Positive</div>
-                  <div className="text-2xl font-semibold">{FP}</div>
-                  <div className="text-xs text-muted-foreground">{fpPercent}%</div>
-                </div>
-                <div className="p-4 flex flex-col justify-between items-center">
-                  <div className="text-sm font-medium">True Negative</div>
-                  <div className="text-2xl font-semibold">{TN}</div>
-                  <div className="text-xs text-muted-foreground">{tnPercent}%</div>
-                </div>
-              </div>
-            </div>
-          </div>
+            <Grid container>
+              <Grid item xs={12} container>
+                <Grid item xs={6}></Grid>
+                <Grid item xs={6} container sx={{ bgcolor: "action.hover", py: 1 }}>
+                  <Grid item xs={6}>
+                    <Typography variant="caption" align="center">Predicted Positive</Typography>
+                  </Grid>
+                  <Grid item xs={6}>
+                    <Typography variant="caption" align="center">Predicted Negative</Typography>
+                  </Grid>
+                </Grid>
+              </Grid>
+              
+              {/* True Positive and False Negative */}
+              <Grid item xs={12} container sx={{ borderTop: 1, borderColor: "divider" }}>
+                <Grid item xs={6} sx={{ 
+                  bgcolor: "action.hover", 
+                  display: "flex", 
+                  alignItems: "center", 
+                  justifyContent: "center",
+                  position: "relative",
+                  height: 100
+                }}>
+                  <Typography 
+                    variant="caption" 
+                    sx={{ 
+                      transform: "rotate(-90deg)",
+                      whiteSpace: "nowrap",
+                      position: "absolute"
+                    }}
+                  >
+                    Actual Positive
+                  </Typography>
+                </Grid>
+                <Grid item xs={6} container>
+                  <Grid item xs={6} sx={{ 
+                    p: 2, 
+                    borderLeft: 1, 
+                    borderRight: 1, 
+                    borderColor: "divider",
+                    display: "flex",
+                    flexDirection: "column",
+                    justifyContent: "space-between",
+                    alignItems: "center"
+                  }}>
+                    <Typography variant="body2">True Positive</Typography>
+                    <Typography variant="h4">{TP}</Typography>
+                    <Typography variant="caption" color="text.secondary">{tpPercent}%</Typography>
+                  </Grid>
+                  <Grid item xs={6} sx={{ 
+                    p: 2,
+                    display: "flex",
+                    flexDirection: "column",
+                    justifyContent: "space-between",
+                    alignItems: "center"
+                  }}>
+                    <Typography variant="body2">False Negative</Typography>
+                    <Typography variant="h4">{FN}</Typography>
+                    <Typography variant="caption" color="text.secondary">{fnPercent}%</Typography>
+                  </Grid>
+                </Grid>
+              </Grid>
+              
+              {/* False Positive and True Negative */}
+              <Grid item xs={12} container sx={{ borderTop: 1, borderColor: "divider" }}>
+                <Grid item xs={6} sx={{ 
+                  bgcolor: "action.hover", 
+                  display: "flex", 
+                  alignItems: "center", 
+                  justifyContent: "center",
+                  position: "relative",
+                  height: 100
+                }}>
+                  <Typography 
+                    variant="caption" 
+                    sx={{ 
+                      transform: "rotate(-90deg)",
+                      whiteSpace: "nowrap",
+                      position: "absolute"
+                    }}
+                  >
+                    Actual Negative
+                  </Typography>
+                </Grid>
+                <Grid item xs={6} container>
+                  <Grid item xs={6} sx={{ 
+                    p: 2, 
+                    borderLeft: 1, 
+                    borderRight: 1, 
+                    borderColor: "divider",
+                    display: "flex",
+                    flexDirection: "column",
+                    justifyContent: "space-between",
+                    alignItems: "center"
+                  }}>
+                    <Typography variant="body2">False Positive</Typography>
+                    <Typography variant="h4">{FP}</Typography>
+                    <Typography variant="caption" color="text.secondary">{fpPercent}%</Typography>
+                  </Grid>
+                  <Grid item xs={6} sx={{ 
+                    p: 2,
+                    display: "flex",
+                    flexDirection: "column",
+                    justifyContent: "space-between",
+                    alignItems: "center"
+                  }}>
+                    <Typography variant="body2">True Negative</Typography>
+                    <Typography variant="h4">{TN}</Typography>
+                    <Typography variant="caption" color="text.secondary">{tnPercent}%</Typography>
+                  </Grid>
+                </Grid>
+              </Grid>
+            </Grid>
+          </Paper>
           
-          <div className="grid grid-cols-4 gap-4 mt-4">
-            <div className="bg-card p-3 rounded-lg border">
-              <div className="text-xs text-muted-foreground">Accuracy</div>
-              <div className="text-lg font-medium">{accuracy}%</div>
-            </div>
-            <div className="bg-card p-3 rounded-lg border">
-              <div className="text-xs text-muted-foreground">Precision</div>
-              <div className="text-lg font-medium">{precision}%</div>
-            </div>
-            <div className="bg-card p-3 rounded-lg border">
-              <div className="text-xs text-muted-foreground">Recall</div>
-              <div className="text-lg font-medium">{recall}%</div>
-            </div>
-            <div className="bg-card p-3 rounded-lg border">
-              <div className="text-xs text-muted-foreground">F1 Score</div>
-              <div className="text-lg font-medium">{f1Score}%</div>
-            </div>
-          </div>
-        </div>
+          <Grid container spacing={2} sx={{ mt: 2 }}>
+            <Grid item xs={3}>
+              <Paper variant="outlined" sx={{ p: 1.5 }}>
+                <Typography variant="caption" color="text.secondary">Accuracy</Typography>
+                <Typography variant="h6">{accuracy}%</Typography>
+              </Paper>
+            </Grid>
+            <Grid item xs={3}>
+              <Paper variant="outlined" sx={{ p: 1.5 }}>
+                <Typography variant="caption" color="text.secondary">Precision</Typography>
+                <Typography variant="h6">{precision}%</Typography>
+              </Paper>
+            </Grid>
+            <Grid item xs={3}>
+              <Paper variant="outlined" sx={{ p: 1.5 }}>
+                <Typography variant="caption" color="text.secondary">Recall</Typography>
+                <Typography variant="h6">{recall}%</Typography>
+              </Paper>
+            </Grid>
+            <Grid item xs={3}>
+              <Paper variant="outlined" sx={{ p: 1.5 }}>
+                <Typography variant="caption" color="text.secondary">F1 Score</Typography>
+                <Typography variant="h6">{f1Score}%</Typography>
+              </Paper>
+            </Grid>
+          </Grid>
+        </Box>
       </CardContent>
     </Card>
   );

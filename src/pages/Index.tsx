@@ -1,11 +1,20 @@
 
 import React, { useState, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
-import Layout from "@/components/Layout";
+import MuiLayout from "@/components/MuiLayout";
 import ROCCurve from "@/components/ROCCurve";
 import ConfusionMatrix from "@/components/ConfusionMatrix";
 import ThresholdControl from "@/components/ThresholdControl";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import { 
+  Card, 
+  CardContent, 
+  CardHeader, 
+  Typography, 
+  Grid, 
+  Box, 
+  Paper, 
+  Divider 
+} from "@mui/material";
 import { fetchMetrics } from "@/services/api";
 import { ConfusionMatrixData } from "@/types";
 
@@ -35,87 +44,99 @@ const Index = () => {
   const emptyMatrix: ConfusionMatrixData = { TP: 0, FP: 0, TN: 0, FN: 0 };
   
   return (
-    <Layout>
-      <div className="max-w-6xl mx-auto pt-4 animate-fade-in">
-        <Card className="mb-8 overflow-hidden">
-          <CardHeader className="pb-2">
-            <CardTitle className="text-2xl font-medium">ROC Matrix Vista</CardTitle>
-            <CardDescription>
-              Visualize and analyze classification performance with ROC curves and confusion matrices
-            </CardDescription>
-          </CardHeader>
+    <MuiLayout>
+      <Box sx={{ pt: 2 }}>
+        <Card sx={{ mb: 4 }}>
+          <CardHeader 
+            title="ROC Matrix Vista"
+            titleTypographyProps={{ variant: "h4", fontWeight: "medium" }}
+            subheader="Visualize and analyze classification performance with ROC curves and confusion matrices"
+          />
           <CardContent>
-            <p className="text-muted-foreground">
+            <Typography color="text.secondary">
               Adjust the threshold below to see how it affects true positive rate, false positive rate, 
               and overall model performance metrics in real-time.
-            </p>
+            </Typography>
           </CardContent>
         </Card>
         
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
-          <ThresholdControl 
-            threshold={threshold} 
-            onChange={setThreshold}
-            className="lg:col-span-1"
-          />
+        <Grid container spacing={3} sx={{ mb: 3 }}>
+          <Grid item xs={12} md={4}>
+            <ThresholdControl 
+              threshold={threshold} 
+              onChange={setThreshold}
+            />
+          </Grid>
           
-          <Card className="lg:col-span-2 overflow-hidden transition-custom animate-fade-up">
-            <CardHeader className="pb-2">
-              <CardTitle className="text-lg font-medium">Threshold Impact</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-6">
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <div className="text-sm font-medium">Threshold:</div>
-                    <div className="text-3xl font-semibold tracking-tight">{threshold.toFixed(2)}</div>
-                  </div>
-                  <div className="space-y-2">
-                    <div className="text-sm font-medium">Current Point:</div>
-                    <div className="flex space-x-4">
-                      <div>
-                        <div className="text-xs text-muted-foreground">TPR</div>
-                        <div className="text-xl font-medium">
-                          {data?.roc_curve.find(p => Math.abs(p.threshold - threshold) < 0.01)?.tpr.toFixed(3) || "—"}
-                        </div>
-                      </div>
-                      <div>
-                        <div className="text-xs text-muted-foreground">FPR</div>
-                        <div className="text-xl font-medium">
-                          {data?.roc_curve.find(p => Math.abs(p.threshold - threshold) < 0.01)?.fpr.toFixed(3) || "—"}
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                </div>
+          <Grid item xs={12} md={8}>
+            <Card>
+              <CardHeader 
+                title="Threshold Impact"
+                titleTypographyProps={{ variant: "h6" }}
+                sx={{ pb: 1 }}
+              />
+              <CardContent>
+                <Grid container spacing={3}>
+                  <Grid item xs={12} sm={6}>
+                    <Box>
+                      <Typography variant="body2" fontWeight="medium">Threshold:</Typography>
+                      <Typography variant="h4" fontWeight="medium">{threshold.toFixed(2)}</Typography>
+                    </Box>
+                  </Grid>
+                  <Grid item xs={12} sm={6}>
+                    <Box>
+                      <Typography variant="body2" fontWeight="medium">Current Point:</Typography>
+                      <Box display="flex" gap={4} mt={1}>
+                        <Box>
+                          <Typography variant="caption" color="text.secondary">TPR</Typography>
+                          <Typography variant="h6">
+                            {data?.roc_curve.find(p => Math.abs(p.threshold - threshold) < 0.01)?.tpr.toFixed(3) || "—"}
+                          </Typography>
+                        </Box>
+                        <Box>
+                          <Typography variant="caption" color="text.secondary">FPR</Typography>
+                          <Typography variant="h6">
+                            {data?.roc_curve.find(p => Math.abs(p.threshold - threshold) < 0.01)?.fpr.toFixed(3) || "—"}
+                          </Typography>
+                        </Box>
+                      </Box>
+                    </Box>
+                  </Grid>
+                </Grid>
                 
-                <div className="space-y-2 pt-2">
-                  <div className="text-sm font-medium">Understanding the threshold:</div>
-                  <p className="text-sm text-muted-foreground">
+                <Divider sx={{ my: 2 }} />
+                
+                <Box>
+                  <Typography variant="body2" fontWeight="medium">Understanding the threshold:</Typography>
+                  <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
                     A higher threshold value means the model requires more confidence to classify a sample as positive,
                     resulting in fewer false positives but more false negatives. A lower threshold will classify more
                     samples as positive, increasing true positives but also false positives.
-                  </p>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        </div>
+                  </Typography>
+                </Box>
+              </CardContent>
+            </Card>
+          </Grid>
+        </Grid>
         
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          <ROCCurve 
-            rocData={data?.roc_curve || []} 
-            currentThreshold={threshold}
-            isLoading={isLoading}
-          />
+        <Grid container spacing={3}>
+          <Grid item xs={12} md={6}>
+            <ROCCurve 
+              rocData={data?.roc_curve || []} 
+              currentThreshold={threshold}
+              isLoading={isLoading}
+            />
+          </Grid>
           
-          <ConfusionMatrix 
-            data={data?.confusion_matrix || emptyMatrix}
-            isLoading={isLoading}
-          />
-        </div>
-      </div>
-    </Layout>
+          <Grid item xs={12} md={6}>
+            <ConfusionMatrix 
+              data={data?.confusion_matrix || emptyMatrix}
+              isLoading={isLoading}
+            />
+          </Grid>
+        </Grid>
+      </Box>
+    </MuiLayout>
   );
 };
 

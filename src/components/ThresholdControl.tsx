@@ -1,8 +1,6 @@
 
 import React from "react";
-import { Slider } from "@/components/ui/slider";
-import { Card, CardContent } from "@/components/ui/card";
-import { cn } from "@/lib/utils";
+import { Card, CardContent, Typography, Slider, Box } from "@mui/material";
 
 interface ThresholdControlProps {
   threshold: number;
@@ -15,43 +13,48 @@ const ThresholdControl: React.FC<ThresholdControlProps> = ({
   onChange,
   className,
 }) => {
-  const handleValueChange = (values: number[]) => {
-    onChange(values[0]);
+  const handleValueChange = (event: Event, value: number | number[]) => {
+    onChange(value as number);
   };
 
   return (
-    <Card className={cn("overflow-hidden transition-custom animate-fade-up", className)}>
-      <CardContent className="pt-6">
-        <div className="space-y-4">
-          <div className="flex items-center justify-between">
-            <div>
-              <div className="text-xs uppercase text-muted-foreground font-medium tracking-wide">
+    <Card className={className} sx={{ overflow: "hidden", transition: "all 0.3s" }}>
+      <CardContent sx={{ pt: 2 }}>
+        <Box sx={{ mb: 3 }}>
+          <Box display="flex" justifyContent="space-between" alignItems="center">
+            <Box>
+              <Typography variant="caption" color="text.secondary" sx={{ 
+                textTransform: "uppercase", 
+                fontWeight: "medium",
+                letterSpacing: "0.05em"
+              }}>
                 Threshold
-              </div>
-              <div className="font-medium text-xl">
+              </Typography>
+              <Typography variant="h5">
                 {threshold.toFixed(2)}
-              </div>
-            </div>
-            <div className="text-sm text-muted-foreground">
+              </Typography>
+            </Box>
+            <Typography variant="body2" color="text.secondary">
               Adjust to see results
-            </div>
-          </div>
+            </Typography>
+          </Box>
           
-          <Slider
-            defaultValue={[threshold]}
-            min={0}
-            max={1}
-            step={0.01}
-            onValueChange={handleValueChange}
-            className="cursor-pointer"
-          />
+          <Box sx={{ mt: 3, mb: 1 }}>
+            <Slider
+              value={threshold}
+              min={0}
+              max={1}
+              step={0.01}
+              onChange={handleValueChange}
+            />
+          </Box>
           
-          <div className="flex justify-between text-xs text-muted-foreground">
-            <span>0.00</span>
-            <span>0.50</span>
-            <span>1.00</span>
-          </div>
-        </div>
+          <Box display="flex" justifyContent="space-between">
+            <Typography variant="caption" color="text.secondary">0.00</Typography>
+            <Typography variant="caption" color="text.secondary">0.50</Typography>
+            <Typography variant="caption" color="text.secondary">1.00</Typography>
+          </Box>
+        </Box>
       </CardContent>
     </Card>
   );

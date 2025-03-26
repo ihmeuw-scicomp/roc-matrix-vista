@@ -1,8 +1,8 @@
 
 import { useLocation } from "react-router-dom";
 import { useEffect } from "react";
-import { Button } from "@/components/ui/button";
-import Layout from "@/components/Layout";
+import { Button, Typography, Box, Container } from "@mui/material";
+import MuiLayout from "@/components/MuiLayout";
 
 const NotFound = () => {
   const location = useLocation();
@@ -15,20 +15,33 @@ const NotFound = () => {
   }, [location.pathname]);
 
   return (
-    <Layout>
-      <div className="min-h-[70vh] flex flex-col items-center justify-center">
-        <div className="text-center animate-fade-up">
-          <h1 className="text-8xl font-bold text-primary/20 mb-4">404</h1>
-          <h2 className="text-2xl font-medium mb-4">Page not found</h2>
-          <p className="text-muted-foreground mb-8 max-w-md mx-auto">
+    <MuiLayout>
+      <Container maxWidth="sm">
+        <Box 
+          sx={{ 
+            minHeight: "70vh", 
+            display: "flex", 
+            flexDirection: "column", 
+            alignItems: "center", 
+            justifyContent: "center",
+            textAlign: "center" 
+          }}
+        >
+          <Typography variant="h1" color="primary.light" sx={{ opacity: 0.2, mb: 2, fontWeight: "bold" }}>
+            404
+          </Typography>
+          <Typography variant="h4" gutterBottom>
+            Page not found
+          </Typography>
+          <Typography color="text.secondary" paragraph sx={{ mb: 4 }}>
             The page you are looking for doesn't exist or has been moved.
-          </p>
-          <Button asChild>
-            <a href="/">Return to Home</a>
+          </Typography>
+          <Button variant="contained" color="primary" href="/">
+            Return to Home
           </Button>
-        </div>
-      </div>
-    </Layout>
+        </Box>
+      </Container>
+    </MuiLayout>
   );
 };
 
