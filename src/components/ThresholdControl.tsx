@@ -1,4 +1,3 @@
-
 import React from "react";
 import { Card, CardContent, Typography, Slider, Box } from "@mui/material";
 
@@ -16,6 +15,15 @@ const ThresholdControl: React.FC<ThresholdControlProps> = ({
   const handleValueChange = (event: Event, value: number | number[]) => {
     onChange(value as number);
   };
+
+  // Define marks for the slider
+  const marks = [
+    { value: 0, label: '0.00' },
+    { value: 0.25, label: '0.25' },
+    { value: 0.5, label: '0.50' },
+    { value: 0.75, label: '0.75' },
+    { value: 1, label: '1.00' },
+  ];
 
   return (
     <Card className={className} sx={{ overflow: "hidden", transition: "all 0.3s" }}>
@@ -46,13 +54,9 @@ const ThresholdControl: React.FC<ThresholdControlProps> = ({
               max={1}
               step={0.01}
               onChange={handleValueChange}
+              marks={marks}
+              valueLabelDisplay="auto"
             />
-          </Box>
-          
-          <Box display="flex" justifyContent="space-between">
-            <Typography variant="caption" color="text.secondary">0.00</Typography>
-            <Typography variant="caption" color="text.secondary">0.50</Typography>
-            <Typography variant="caption" color="text.secondary">1.00</Typography>
           </Box>
         </Box>
       </CardContent>

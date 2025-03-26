@@ -1,10 +1,10 @@
-
 import React, { useState, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
 import MuiLayout from "@/components/MuiLayout";
 import ROCCurve from "@/components/ROCCurve";
 import ConfusionMatrix from "@/components/ConfusionMatrix";
-import ThresholdControl from "@/components/ThresholdControl";
+import ThresholdSlider from "@/components/ThresholdSlider";
+import ThresholdInfo from '@/components/ThresholdInfo';
 import { 
   Card, 
   CardContent, 
@@ -43,93 +43,67 @@ const Index = () => {
   // Default empty confusion matrix for initial render
   const emptyMatrix: ConfusionMatrixData = { TP: 0, FP: 0, TN: 0, FN: 0 };
   
+  // Show error message if data fetching fails
+  if (isError) {
+    return (
+      <MuiLayout>
+        <Box sx={{ p: 3, textAlign: 'center' }}>
+          <Typography color="error">Error fetching data. Please try again later.</Typography>
+        </Box>
+      </MuiLayout>
+    );
+  }
+  
   return (
     <MuiLayout>
       <Box sx={{ pt: 2 }}>
+        {/* Main Title and Description */}
         <Card sx={{ mb: 4 }}>
-          <CardHeader 
+          <CardHeader
             title="ROC Matrix Vista"
-            titleTypographyProps={{ variant: "h4", fontWeight: "medium" }}
+            titleTypographyProps={{ variant: "h4", fontWeight: "medium", textAlign: "center" }}
             subheader="Visualize and analyze classification performance with ROC curves and confusion matrices"
+            subheaderTypographyProps={{ textAlign: "center" }}
           />
           <CardContent>
-            <Typography color="text.secondary">
-              Adjust the threshold below to see how it affects true positive rate, false positive rate, 
+            <Typography color="text.secondary" sx={{ textAlign: "center" }}>
+              Adjust the threshold below to see how it affects true positive rate, false positive rate,
               and overall model performance metrics in real-time.
             </Typography>
           </CardContent>
         </Card>
-        
-        <Grid container spacing={3} sx={{ mb: 3 }}>
-          <Grid component="div" sx={{ width: { xs: "100%", md: "33.333%" }, padding: 1.5 }}>
-            <ThresholdControl 
-              threshold={threshold} 
-              onChange={setThreshold}
-            />
-          </Grid>
-          
-          <Grid component="div" sx={{ width: { xs: "100%", md: "66.667%" }, padding: 1.5 }}>
+
+        {/* Threshold Adjustment Section */}
+        <Box sx={{ display: 'flex', flexDirection: { xs: 'column', md: 'row' }, gap: 3, my: 4 }}>
+          <Box sx={{ flex: 1 }}>
             <Card>
-              <CardHeader 
-                title="Threshold Impact"
-                titleTypographyProps={{ variant: "h6" }}
-                sx={{ pb: 1 }}
-              />
               <CardContent>
-                <Grid container spacing={3}>
-                  <Grid component="div" sx={{ width: { xs: "100%", sm: "50%" } }}>
-                    <Box>
-                      <Typography variant="body2" fontWeight="medium">Threshold:</Typography>
-                      <Typography variant="h4" fontWeight="medium">{threshold.toFixed(2)}</Typography>
-                    </Box>
-                  </Grid>
-                  <Grid component="div" sx={{ width: { xs: "100%", sm: "50%" } }}>
-                    <Box>
-                      <Typography variant="body2" fontWeight="medium">Current Point:</Typography>
-                      <Box display="flex" gap={4} mt={1}>
-                        <Box>
-                          <Typography variant="caption" color="text.secondary">TPR</Typography>
-                          <Typography variant="h6">
-                            {data?.roc_curve.find(p => Math.abs(p.threshold - threshold) < 0.01)?.tpr.toFixed(3) || "—"}
-                          </Typography>
-                        </Box>
-                        <Box>
-                          <Typography variant="caption" color="text.secondary">FPR</Typography>
-                          <Typography variant="h6">
-                            {data?.roc_curve.find(p => Math.abs(p.threshold - threshold) < 0.01)?.fpr.toFixed(3) || "—"}
-                          </Typography>
-                        </Box>
-                      </Box>
-                    </Box>
-                  </Grid>
-                </Grid>
-                
-                <Divider sx={{ my: 2 }} />
-                
-                <Box>
-                  <Typography variant="body2" fontWeight="medium">Understanding the threshold:</Typography>
-                  <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
-                    A higher threshold value means the model requires more confidence to classify a sample as positive,
-                    resulting in fewer false positives but more false negatives. A lower threshold will classify more
-                    samples as positive, increasing true positives but also false positives.
-                  </Typography>
-                </Box>
+                <ThresholdSlider value={threshold} onChange={setThreshold} />
               </CardContent>
             </Card>
-          </Grid>
-        </Grid>
-        
+          </Box>
+          <Box sx={{ flex: 1 }}>
+            <ThresholdInfo
+              threshold={threshold}
+              tpr={data?.current_metrics.tpr}
+              fpr={data?.current_metrics.fpr}
+            />
+          </Box>
+        </Box>
+
+        {/* ROC Curve and Confusion Matrix Section */}
         <Grid container spacing={3}>
           <Grid component="div" sx={{ width: { xs: "100%", md: "50%" }, padding: 1.5 }}>
-            <ROCCurve 
-              rocData={data?.roc_curve || []} 
+            <ROCCurve
+              rocData={data?.roc_curve || []}
               currentThreshold={threshold}
+              currentPoint={data?.current_metrics}
+              onThresholdSelect={setThreshold}
               isLoading={isLoading}
             />
           </Grid>
-          
           <Grid component="div" sx={{ width: { xs: "100%", md: "50%" }, padding: 1.5 }}>
-            <ConfusionMatrix 
+            <ConfusionMatrix
               data={data?.confusion_matrix || emptyMatrix}
               isLoading={isLoading}
             />
