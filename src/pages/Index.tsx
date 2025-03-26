@@ -61,14 +61,14 @@ const Index = () => {
         </Card>
         
         <Grid container spacing={3} sx={{ mb: 3 }}>
-          <Grid xs={12} md={4}>
+          <Grid component="div" sx={{ width: { xs: "100%", md: "33.333%" }, padding: 1.5 }}>
             <ThresholdControl 
               threshold={threshold} 
               onChange={setThreshold}
             />
           </Grid>
           
-          <Grid xs={12} md={8}>
+          <Grid component="div" sx={{ width: { xs: "100%", md: "66.667%" }, padding: 1.5 }}>
             <Card>
               <CardHeader 
                 title="Threshold Impact"
@@ -77,13 +77,13 @@ const Index = () => {
               />
               <CardContent>
                 <Grid container spacing={3}>
-                  <Grid xs={12} sm={6}>
+                  <Grid component="div" sx={{ width: { xs: "100%", sm: "50%" } }}>
                     <Box>
                       <Typography variant="body2" fontWeight="medium">Threshold:</Typography>
                       <Typography variant="h4" fontWeight="medium">{threshold.toFixed(2)}</Typography>
                     </Box>
                   </Grid>
-                  <Grid xs={12} sm={6}>
+                  <Grid component="div" sx={{ width: { xs: "100%", sm: "50%" } }}>
                     <Box>
                       <Typography variant="body2" fontWeight="medium">Current Point:</Typography>
                       <Box display="flex" gap={4} mt={1}>
@@ -120,7 +120,7 @@ const Index = () => {
         </Grid>
         
         <Grid container spacing={3}>
-          <Grid xs={12} md={6}>
+          <Grid component="div" sx={{ width: { xs: "100%", md: "50%" }, padding: 1.5 }}>
             <ROCCurve 
               rocData={data?.roc_curve || []} 
               currentThreshold={threshold}
@@ -128,7 +128,7 @@ const Index = () => {
             />
           </Grid>
           
-          <Grid xs={12} md={6}>
+          <Grid component="div" sx={{ width: { xs: "100%", md: "50%" }, padding: 1.5 }}>
             <ConfusionMatrix 
               data={data?.confusion_matrix || emptyMatrix}
               isLoading={isLoading}
