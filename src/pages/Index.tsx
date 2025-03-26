@@ -12,9 +12,9 @@ import {
   Typography, 
   Box, 
   Paper, 
-  Divider 
+  Divider,
+  Grid
 } from "@mui/material";
-import Grid from "@mui/material/Unstable_Grid2";
 import { fetchMetrics } from "@/services/api";
 import { ConfusionMatrixData } from "@/types";
 
@@ -61,14 +61,14 @@ const Index = () => {
         </Card>
         
         <Grid container spacing={3} sx={{ mb: 3 }}>
-          <Grid md={4}>
+          <Grid item md={4}>
             <ThresholdControl 
               threshold={threshold} 
               onChange={setThreshold}
             />
           </Grid>
           
-          <Grid md={8}>
+          <Grid item md={8}>
             <Card>
               <CardHeader 
                 title="Threshold Impact"
@@ -77,13 +77,13 @@ const Index = () => {
               />
               <CardContent>
                 <Grid container spacing={3}>
-                  <Grid sm={6}>
+                  <Grid item sm={6}>
                     <Box>
                       <Typography variant="body2" fontWeight="medium">Threshold:</Typography>
                       <Typography variant="h4" fontWeight="medium">{threshold.toFixed(2)}</Typography>
                     </Box>
                   </Grid>
-                  <Grid sm={6}>
+                  <Grid item sm={6}>
                     <Box>
                       <Typography variant="body2" fontWeight="medium">Current Point:</Typography>
                       <Box display="flex" gap={4} mt={1}>
@@ -120,7 +120,7 @@ const Index = () => {
         </Grid>
         
         <Grid container spacing={3}>
-          <Grid md={6}>
+          <Grid item md={6}>
             <ROCCurve 
               rocData={data?.roc_curve || []} 
               currentThreshold={threshold}
@@ -128,7 +128,7 @@ const Index = () => {
             />
           </Grid>
           
-          <Grid md={6}>
+          <Grid item md={6}>
             <ConfusionMatrix 
               data={data?.confusion_matrix || emptyMatrix}
               isLoading={isLoading}
