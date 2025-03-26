@@ -1,6 +1,6 @@
 
 import React from "react";
-import { Card, CardContent, CardHeader, Typography, Box, Grid, Paper } from "@mui/material";
+import { Card, CardContent, CardHeader, Typography, Box, Paper, Grid } from "@mui/material";
 import { ConfusionMatrixData } from "@/types";
 
 interface ConfusionMatrixProps {
@@ -40,21 +40,19 @@ const ConfusionMatrix: React.FC<ConfusionMatrixProps> = ({
           <Paper variant="outlined" sx={{ overflow: "hidden", mb: 2 }}>
             {/* Header Row */}
             <Grid container>
-              <Grid item xs={12} container>
-                <Grid item xs={6}></Grid>
-                <Grid item xs={6} container sx={{ bgcolor: "action.hover", py: 1 }}>
-                  <Grid item xs={6}>
-                    <Typography variant="caption" align="center">Predicted Positive</Typography>
-                  </Grid>
-                  <Grid item xs={6}>
-                    <Typography variant="caption" align="center">Predicted Negative</Typography>
-                  </Grid>
+              <Grid xs={6}></Grid>
+              <Grid xs={6} container sx={{ bgcolor: "action.hover", py: 1 }}>
+                <Grid xs={6}>
+                  <Typography variant="caption" align="center">Predicted Positive</Typography>
+                </Grid>
+                <Grid xs={6}>
+                  <Typography variant="caption" align="center">Predicted Negative</Typography>
                 </Grid>
               </Grid>
               
               {/* True Positive and False Negative */}
-              <Grid item xs={12} container sx={{ borderTop: 1, borderColor: "divider" }}>
-                <Grid item xs={6} sx={{ 
+              <Grid xs={12} container sx={{ borderTop: 1, borderColor: "divider" }}>
+                <Grid xs={6} sx={{ 
                   bgcolor: "action.hover", 
                   display: "flex", 
                   alignItems: "center", 
@@ -73,8 +71,8 @@ const ConfusionMatrix: React.FC<ConfusionMatrixProps> = ({
                     Actual Positive
                   </Typography>
                 </Grid>
-                <Grid item xs={6} container>
-                  <Grid item xs={6} sx={{ 
+                <Grid xs={6} container>
+                  <Grid xs={6} sx={{ 
                     p: 2, 
                     borderLeft: 1, 
                     borderRight: 1, 
@@ -88,7 +86,7 @@ const ConfusionMatrix: React.FC<ConfusionMatrixProps> = ({
                     <Typography variant="h4">{TP}</Typography>
                     <Typography variant="caption" color="text.secondary">{tpPercent}%</Typography>
                   </Grid>
-                  <Grid item xs={6} sx={{ 
+                  <Grid xs={6} sx={{ 
                     p: 2,
                     display: "flex",
                     flexDirection: "column",
@@ -103,8 +101,8 @@ const ConfusionMatrix: React.FC<ConfusionMatrixProps> = ({
               </Grid>
               
               {/* False Positive and True Negative */}
-              <Grid item xs={12} container sx={{ borderTop: 1, borderColor: "divider" }}>
-                <Grid item xs={6} sx={{ 
+              <Grid xs={12} container sx={{ borderTop: 1, borderColor: "divider" }}>
+                <Grid xs={6} sx={{ 
                   bgcolor: "action.hover", 
                   display: "flex", 
                   alignItems: "center", 
@@ -123,8 +121,8 @@ const ConfusionMatrix: React.FC<ConfusionMatrixProps> = ({
                     Actual Negative
                   </Typography>
                 </Grid>
-                <Grid item xs={6} container>
-                  <Grid item xs={6} sx={{ 
+                <Grid xs={6} container>
+                  <Grid xs={6} sx={{ 
                     p: 2, 
                     borderLeft: 1, 
                     borderRight: 1, 
@@ -138,7 +136,7 @@ const ConfusionMatrix: React.FC<ConfusionMatrixProps> = ({
                     <Typography variant="h4">{FP}</Typography>
                     <Typography variant="caption" color="text.secondary">{fpPercent}%</Typography>
                   </Grid>
-                  <Grid item xs={6} sx={{ 
+                  <Grid xs={6} sx={{ 
                     p: 2,
                     display: "flex",
                     flexDirection: "column",
@@ -155,25 +153,25 @@ const ConfusionMatrix: React.FC<ConfusionMatrixProps> = ({
           </Paper>
           
           <Grid container spacing={2} sx={{ mt: 2 }}>
-            <Grid item xs={3}>
+            <Grid xs={3}>
               <Paper variant="outlined" sx={{ p: 1.5 }}>
                 <Typography variant="caption" color="text.secondary">Accuracy</Typography>
                 <Typography variant="h6">{accuracy}%</Typography>
               </Paper>
             </Grid>
-            <Grid item xs={3}>
+            <Grid xs={3}>
               <Paper variant="outlined" sx={{ p: 1.5 }}>
                 <Typography variant="caption" color="text.secondary">Precision</Typography>
                 <Typography variant="h6">{precision}%</Typography>
               </Paper>
             </Grid>
-            <Grid item xs={3}>
+            <Grid xs={3}>
               <Paper variant="outlined" sx={{ p: 1.5 }}>
                 <Typography variant="caption" color="text.secondary">Recall</Typography>
                 <Typography variant="h6">{recall}%</Typography>
               </Paper>
             </Grid>
-            <Grid item xs={3}>
+            <Grid xs={3}>
               <Paper variant="outlined" sx={{ p: 1.5 }}>
                 <Typography variant="caption" color="text.secondary">F1 Score</Typography>
                 <Typography variant="h6">{f1Score}%</Typography>
