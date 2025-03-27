@@ -14,8 +14,14 @@ const ThresholdSlider: React.FC<ThresholdSliderProps> = ({ value, onChange }) =>
   return (
     <Card sx={{ minHeight: 200 /* adjust to match ThresholdInfo's height */ }}>
       <CardContent>
-        <Typography variant="h6" gutterBottom>
-          Adjust Threshold
+        <Typography variant="body2" color="text.secondary" gutterBottom>
+          <strong>Threshold:</strong>
+        </Typography>
+        <Typography variant="body2" color="text.secondary" gutterBottom>
+          {value.toFixed(2)}
+        </Typography>
+        <Typography variant="body2" color="text.secondary" gutterBottom align="right">
+          Adjust to see results
         </Typography>
         <Box
           sx={{
@@ -25,6 +31,7 @@ const ThresholdSlider: React.FC<ThresholdSliderProps> = ({ value, onChange }) =>
             minHeight: 80,
             display: 'flex',
             alignItems: 'center',
+            px: 3, // Add horizontal padding
           }}
         >
           <Slider
