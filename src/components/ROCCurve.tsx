@@ -96,7 +96,6 @@ const ROCCurve: React.FC<ROCCurveProps> = ({
           };
           
           const data = [trace1, trace2, trace3];
-          
           const layout = {
             title: '',
             xaxis: {
@@ -119,8 +118,10 @@ const ROCCurve: React.FC<ROCCurveProps> = ({
             },
             showlegend: true,
             legend: {
-              x: 0.01,
-              y: 0.02,
+              x: 1,
+              y: 0,
+              xanchor: 'right',
+              yanchor: 'bottom',
               bgcolor: 'rgba(255, 255, 255, 0.7)',
               bordercolor: 'rgba(0, 0, 0, 0.1)',
               borderwidth: 1
@@ -129,7 +130,6 @@ const ROCCurve: React.FC<ROCCurveProps> = ({
             paper_bgcolor: 'rgba(0, 0, 0, 0)',
             hovermode: 'closest',
             shapes: [
-              // AUC fill
               {
                 type: 'path',
                 path: `M 0,0 ${trace1.x.map((x, i) => `L ${x},${trace1.y[i]}`).join(' ')} L 1,0 Z`,
@@ -139,22 +139,24 @@ const ROCCurve: React.FC<ROCCurveProps> = ({
             ],
             annotations: [
               {
-                x: 0.95,
-                y: 0.05,
-                xref: 'paper',
-                yref: 'paper',
-                text: `AUC: ${calculateAUC(rocData).toFixed(3)}`,
-                showarrow: false,
+                x: 0.5,                  // Centers the text horizontally (0.5 is the middle of the plot width)
+                y: 0.05,                 // Positions the text near the bottom (5% from the bottom edge)
+                xref: 'paper',           // References the x-coordinate to the plot's paper (entire plotting area)
+                yref: 'paper',           // References the y-coordinate to the plot's paper
+                text: `AUC: ${calculateAUC(rocData).toFixed(3)}`,  // The AUC text with calculated value
+                showarrow: false,        // No arrow, as we’re just placing text
+                xanchor: 'center',       // Anchors the text’s center at x: 0.5
+                yanchor: 'bottom',       // Anchors the text’s bottom at y: 0.05, so it extends upward
                 font: {
-                  family: 'Arial',
+                  family: 'Arial',       // Font styling
                   size: 14,
                   color: 'rgba(0, 0, 0, 0.7)'
                 },
-                bgcolor: 'rgba(255, 255, 255, 0.7)',
-                bordercolor: 'rgba(0, 0, 0, 0.1)',
-                borderwidth: 1,
-                borderpad: 4,
-                borderradius: 4
+                bgcolor: 'rgba(255, 255, 255, 0.7)',  // Background color with transparency
+                bordercolor: 'rgba(0, 0, 0, 0.1)',    // Border color
+                borderwidth: 1,                       // Border thickness
+                borderpad: 4,                         // Padding inside the border
+                borderradius: 4                       // Rounded border corners
               }
             ]
           };

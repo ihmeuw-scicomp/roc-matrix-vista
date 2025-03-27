@@ -4,66 +4,55 @@ import MuiLayout from "@/components/MuiLayout";
 import ROCCurve from "@/components/ROCCurve";
 import ConfusionMatrix from "@/components/ConfusionMatrix";
 import ThresholdSlider from "@/components/ThresholdSlider";
-import ThresholdInfo from '@/components/ThresholdInfo';
-import { 
-  Card, 
-  CardContent, 
-  CardHeader, 
-  Typography, 
-  Box, 
-  Paper, 
-  Divider
-} from "@mui/material";
-import Grid from "@mui/material/Grid";
+import ThresholdInfo from "@/components/ThresholdInfo";
+import { Card, CardHeader, CardContent, Typography, Box, Grid } from "@mui/material";
 import { fetchMetrics } from "@/services/api";
 import { ConfusionMatrixData } from "@/types";
 
 const Index = () => {
   const [threshold, setThreshold] = useState(0.5);
   
-  // Debounce threshold changes to avoid excessive API calls
+  // Debounce threshold changes
   const [debouncedThreshold, setDebouncedThreshold] = useState(threshold);
-  
   useEffect(() => {
     const timer = setTimeout(() => {
       setDebouncedThreshold(threshold);
     }, 100);
-    
     return () => clearTimeout(timer);
   }, [threshold]);
   
-  // Fetch data using React Query
+  // Fetch data
   const { data, isLoading, isError } = useQuery({
-    queryKey: ['metrics', debouncedThreshold],
+    queryKey: ["metrics", debouncedThreshold],
     queryFn: () => fetchMetrics(debouncedThreshold),
-    staleTime: 60000, // 1 minute
+    staleTime: 60000,
     refetchOnWindowFocus: false,
   });
-  
-  // Default empty confusion matrix for initial render
+
+  // Default empty matrix
   const emptyMatrix: ConfusionMatrixData = { TP: 0, FP: 0, TN: 0, FN: 0 };
-  
-  // Show error message if data fetching fails
+
+  // Error state
   if (isError) {
     return (
       <MuiLayout>
-        <Box sx={{ p: 3, textAlign: 'center' }}>
-          <Typography color="error">Error fetching data. Please try again later.</Typography>
+        <Box sx={{ p: 3, textAlign: "center" }}>
+          <Typography color="error">
+            Error fetching data. Please try again later.
+          </Typography>
         </Box>
       </MuiLayout>
     );
   }
-  
+
   return (
     <MuiLayout>
       <Box sx={{ pt: 2 }}>
-        {/* Main Title and Description */}
+        {/* Main Title */}
         <Card sx={{ mb: 4 }}>
           <CardHeader
-            title="ROC Matrix Vista"
-            titleTypographyProps={{ variant: "h4", fontWeight: "medium", textAlign: "center" }}
-            subheader="Visualize and analyze classification performance with ROC curves and confusion matrices"
-            subheaderTypographyProps={{ textAlign: "center" }}
+            title={<Typography variant="h4" fontWeight="medium" textAlign="center">ROC Matrix Vista</Typography>}
+            subheader={<Typography textAlign="center">Visualize and analyze classification performance with ROC curves and confusion matrices</Typography>}
           />
           <CardContent>
             <Typography color="text.secondary" sx={{ textAlign: "center" }}>
@@ -74,15 +63,21 @@ const Index = () => {
         </Card>
 
         {/* Threshold Adjustment Section */}
-        <Box sx={{ display: 'flex', flexDirection: { xs: 'column', md: 'row' }, gap: 3, my: 4 }}>
-          <Box sx={{ flex: 1 }}>
-            <Card>
-              <CardContent>
-                <ThresholdSlider value={threshold} onChange={setThreshold} />
-              </CardContent>
-            </Card>
+        <Box
+          sx={{
+            display: "flex",
+            flexDirection: { xs: "column", md: "row" },
+            gap: 3,
+            my: 4,
+          }}
+        >
+          {/* Slider (occupies 2/5 of the width) */}
+          <Box sx={{ flex: 2 }}>
+            <ThresholdSlider value={threshold} onChange={setThreshold} />
           </Box>
-          <Box sx={{ flex: 1 }}>
+
+          {/* Threshold Info (occupies 3/5 of the width) */}
+          <Box sx={{ flex: 3 }}>
             <ThresholdInfo
               threshold={threshold}
               tpr={data?.current_metrics.tpr}
@@ -92,8 +87,8 @@ const Index = () => {
         </Box>
 
         {/* ROC Curve and Confusion Matrix Section */}
-        <Grid container spacing={3}>
-          <Grid component="div" sx={{ width: { xs: "100%", md: "50%" }, padding: 1.5 }}>
+        <Box sx={{ display: 'flex', flexDirection: { xs: 'column', md: 'row' }, gap: 3 }}>
+          <Box sx={{ flex: 1 }}>
             <ROCCurve
               rocData={data?.roc_curve || []}
               currentThreshold={threshold}
@@ -101,14 +96,14 @@ const Index = () => {
               onThresholdSelect={setThreshold}
               isLoading={isLoading}
             />
-          </Grid>
-          <Grid component="div" sx={{ width: { xs: "100%", md: "50%" }, padding: 1.5 }}>
+          </Box>
+          <Box sx={{ flex: 1 }}>
             <ConfusionMatrix
               data={data?.confusion_matrix || emptyMatrix}
               isLoading={isLoading}
             />
-          </Grid>
-        </Grid>
+          </Box>
+        </Box>
       </Box>
     </MuiLayout>
   );
