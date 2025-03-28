@@ -446,6 +446,16 @@ def compute_confusion_matrix(y_true: np.ndarray, y_score: np.ndarray, threshold:
     recall = recall_score(y_true, y_pred, zero_division=0)
     f1 = f1_score(y_true, y_pred, zero_division=0)
     
+    # Handle potential infinity values by replacing them with None or 0
+    if np.isinf(precision):
+        precision = 0.0
+    if np.isinf(recall):
+        recall = 0.0
+    if np.isinf(f1):
+        f1 = 0.0
+    if np.isinf(accuracy):
+        accuracy = 0.0
+    
     return {
         "true_negatives": int(tn),
         "false_positives": int(fp),

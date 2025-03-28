@@ -101,15 +101,28 @@ def get_metrics(
         min(roc_points, key=lambda p: abs(p["threshold"] - threshold))
     )
     
-    return {
-        "threshold": confusion_matrix.threshold,
+    # Handle infinite values by replacing with None to make JSON serializable
+    response_data = {
+        "threshold": float(confusion_matrix.threshold),
         "roc_curve": roc_points,
-        "confusion_matrix": confusion_matrix,
+        "confusion_matrix": {
+            "threshold": float(confusion_matrix.threshold),
+            "true_positives": confusion_matrix.true_positives,
+            "false_positives": confusion_matrix.false_positives,
+            "true_negatives": confusion_matrix.true_negatives,
+            "false_negatives": confusion_matrix.false_negatives,
+            "precision": None if np.isinf(confusion_matrix.precision) else float(confusion_matrix.precision),
+            "recall": None if np.isinf(confusion_matrix.recall) else float(confusion_matrix.recall),
+            "f1_score": None if np.isinf(confusion_matrix.f1_score) else float(confusion_matrix.f1_score),
+            "accuracy": None if np.isinf(confusion_matrix.accuracy) else float(confusion_matrix.accuracy)
+        },
         "current_metrics": {
-            "tpr": current_point["tpr"], 
-            "fpr": current_point["fpr"]
+            "tpr": None if np.isinf(current_point["tpr"]) else float(current_point["tpr"]),
+            "fpr": None if np.isinf(current_point["fpr"]) else float(current_point["fpr"])
         }
     }
+    
+    return response_data
 
 @router.delete("/analyses/{analysis_id}")
 def delete_analysis(

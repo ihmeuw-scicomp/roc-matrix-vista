@@ -1,3 +1,4 @@
+from sqlalchemy import func
 from sqlalchemy.orm import Session
 from typing import List, Optional
 
@@ -26,7 +27,7 @@ def get_closest_confusion_matrix(db: Session, analysis_id: int, threshold: float
         
     closest_matrix = db.query(ConfusionMatrix)\
         .filter(ConfusionMatrix.roc_analysis_id == analysis_id)\
-        .order_by(abs(ConfusionMatrix.threshold - threshold))\
+        .order_by(func.abs(ConfusionMatrix.threshold - threshold))\
         .first()
     
     return closest_matrix

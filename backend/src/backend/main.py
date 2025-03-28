@@ -1,5 +1,7 @@
-from fastapi import FastAPI, Depends, HTTPException
+from fastapi import FastAPI, Depends, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.middleware.trustedhost import TrustedHostMiddleware
+from fastapi.responses import JSONResponse
 from sqlalchemy.orm import Session
 
 from backend.config import settings
@@ -54,13 +56,13 @@ app = FastAPI(
     description="API for ROC curve analysis and visualization"
 )
 
-# Set up CORS
+# Set up CORS middleware
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=settings.CORS_ORIGINS,
+    allow_origins=["http://localhost:8080"],  # Focus on only the problematic origin for now
     allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
+    allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+    allow_headers=["Content-Type", "Authorization", "Accept"],
 )
 
 @app.on_event("startup")

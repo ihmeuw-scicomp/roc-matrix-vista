@@ -11,7 +11,7 @@ class Settings(BaseSettings):
     DATABASE_URL: str = "sqlite:///./roc_data.db"
     
     # CORS settings
-    CORS_ORIGINS: List[str] = ["http://localhost", "http://localhost:3000", "http://localhost:5173"]
+    CORS_ORIGINS: List[str] = ["http://localhost", "http://localhost:3000", "http://localhost:8080", "*"]
     
     # API settings
     API_DELAY: int = 150  # Milliseconds
