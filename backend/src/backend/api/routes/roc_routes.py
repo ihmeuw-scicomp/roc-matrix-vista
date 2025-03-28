@@ -95,10 +95,20 @@ def get_metrics(
         for point in analysis.roc_curve_data
     ]
     
+    # Find the current point corresponding to the requested threshold
+    current_point = next(
+        (point for point in roc_points if point["threshold"] == threshold),
+        min(roc_points, key=lambda p: abs(p["threshold"] - threshold))
+    )
+    
     return {
         "threshold": confusion_matrix.threshold,
         "roc_curve": roc_points,
-        "confusion_matrix": confusion_matrix
+        "confusion_matrix": confusion_matrix,
+        "current_metrics": {
+            "tpr": current_point["tpr"], 
+            "fpr": current_point["fpr"]
+        }
     }
 
 @router.delete("/analyses/{analysis_id}")

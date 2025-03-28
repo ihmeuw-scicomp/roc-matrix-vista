@@ -124,6 +124,20 @@ def avg_con(name, num, data_frame, config=None):
     avg_confidence = avg_conf_correction(majority_label, conf_df, name_df)
     return (avg_confidence, majority_label)
 
+def find_column_by_suffix(df, suffix):
+    """
+    Find a column in a DataFrame that ends with a specific suffix.
+    
+    Args:
+        df: DataFrame to search in
+        suffix: Suffix string to match
+        
+    Returns:
+        str: First column name that matches the suffix, or None if not found
+    """
+    matching_columns = [col for col in df.columns if col.endswith(suffix)]
+    return matching_columns[0] if matching_columns else None
+
 def process_dataframe(df, method='average', config=None):
     """
     Process a DataFrame with dynamic column detection and configurable settings.
@@ -144,7 +158,11 @@ def process_dataframe(df, method='average', config=None):
             'positive_labels': ['yes', 'Include', 'positive'],
             'threshold': 0.5,
             'default_confidence': 0.5,
-            'default_label': 'unknown'
+            'default_label': 'unknown',
+            'confidence_suffix': '_confidence',
+            'label_suffix': '_label',
+            'adjusted_suffix': '_confidence_adjusted',
+            'prediction_suffix': '_confidence_prediction'
         }
     
     result_df = df.copy()
@@ -157,12 +175,12 @@ def process_dataframe(df, method='average', config=None):
         # Apply the specified method
         if method.lower() == 'average':
             # Add confidence column
-            result_df[prefix + "_confidence"] = result_df.apply(
+            result_df[prefix + config['confidence_suffix']] = result_df.apply(
                 lambda row: avg_con(prefix, iter_count, pd.DataFrame([row]), config)[0], 
                 axis=1
             )
             # Add label column
-            result_df[prefix + "_label"] = result_df.apply(
+            result_df[prefix + config['label_suffix']] = result_df.apply(
                 lambda row: avg_con(prefix, iter_count, pd.DataFrame([row]), config)[1], 
                 axis=1
             )
@@ -206,19 +224,19 @@ def adjust_probabilities(df, config):
     result_df = df.copy()
     
     # Find all label columns
-    label_cols = [col for col in result_df.columns if config['label_pattern'] in col]
+    label_cols = [col for col in result_df.columns if col.endswith(config['label_suffix'])]
     
     for label_col in label_cols:
-        # Find matching confidence column
-        prefix = label_col.replace(config['label_pattern'], '')
-        conf_col = prefix + "_confidence"
+        # Find matching confidence column - extract prefix before the label_suffix
+        prefix = label_col[:-len(config['label_suffix'])]
+        conf_col = prefix + config['confidence_suffix']
         
         if conf_col in result_df.columns:
             # Ensure confidence values are numeric
             result_df[conf_col] = pd.to_numeric(result_df[conf_col], errors='coerce').fillna(config['default_confidence'])
             
             # Create adjusted confidence column
-            adj_col = f"{conf_col}_adjusted"
+            adj_col = prefix + config['adjusted_suffix']
             result_df[adj_col] = result_df.apply(
                 lambda row: row[conf_col] 
                 if row[label_col].strip().lower() in [l.lower() for l in config['positive_labels']]
@@ -234,10 +252,14 @@ def add_prediction(df, threshold=0.5):
     """
     result_df = df.copy()
     
-    for col in result_df.columns:
-        if '_adjusted' in col:
-            pred_col = col.replace('_adjusted', '_prediction')
-            result_df[pred_col] = result_df[col].apply(lambda x: 1 if x >= threshold else 0)
+    # Find all columns ending with '_confidence_adjusted'
+    adjusted_cols = [col for col in result_df.columns if '_confidence_adjusted' in col]
+    
+    for col in adjusted_cols:
+        # Replace the suffix while keeping the prefix intact
+        prefix = col.replace('_confidence_adjusted', '')
+        pred_col = prefix + '_confidence_prediction'
+        result_df[pred_col] = result_df[col].apply(lambda x: 1 if x >= threshold else 0)
     
     return result_df
 
