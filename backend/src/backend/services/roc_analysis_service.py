@@ -1,14 +1,12 @@
 import numpy as np
 import pandas as pd
-from typing import List, Dict, Tuple, Optional, Union
+from typing import List, Dict, Tuple
 from sqlalchemy.orm import Session
-import matplotlib.pyplot as plt
 from sklearn.metrics import roc_curve, auc, confusion_matrix, accuracy_score, precision_score, recall_score, f1_score
-import seaborn as sns
 from collections import Counter
 
 from backend.models.roc_data import ROCAnalysis, ConfusionMatrix
-from backend.db.session import get_db
+from backend.db import get_db
 
 def num_iter(col_lst):
     """

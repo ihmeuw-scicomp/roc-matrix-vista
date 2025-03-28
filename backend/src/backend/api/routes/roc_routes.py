@@ -3,13 +3,14 @@ from sqlalchemy.orm import Session
 import pandas as pd
 import numpy as np
 from typing import List, Optional
+import io
 
-from backend.db.session import get_db
+from backend.db import get_db
 from backend.schemas.roc_schemas import ROCAnalysisSchema, ROCAnalysisCreate, ROCMetricsResponse
 from backend.services.roc_analysis_service import (
     process_dataframe, create_roc_analysis, compute_confusion_matrix
 )
-from backend.crud.roc_crud import (
+from backend.repositories.roc_analysis_repository import (
     get_roc_analysis, get_all_roc_analyses, get_closest_confusion_matrix, delete_roc_analysis
 )
 
@@ -110,3 +111,55 @@ def delete_analysis(
     if not success:
         raise HTTPException(status_code=404, detail="Analysis not found")
     return {"message": "Analysis deleted successfully"}
+
+@router.post("/roc-analysis/", response_model=dict)
+async def create_new_analysis(
+    name: str = Form(...),
+    description: Optional[str] = Form(None),
+    file: UploadFile = File(...),
+    threshold: float = Form(0.5),
+    true_label_col: str = Form(...),
+    pred_prob_col: str = Form(...),
+    db: Session = Depends(get_db)
+):
+    """Create a new ROC analysis from uploaded CSV data with column specification"""
+    try:
+        # Read CSV file
+        content = await file.read()
+        df = pd.read_csv(io.StringIO(content.decode('utf-8')))
+        
+        # Process data
+        if not true_label_col in df.columns or not pred_prob_col in df.columns:
+            raise HTTPException(status_code=400, detail="Specified columns not found in CSV")
+        
+        # Extract true labels and predicted probabilities
+        true_labels = df[true_label_col].values.astype(np.int32)
+        pred_probs = df[pred_prob_col].values.astype(np.float32)
+        
+        # Create ROC analysis
+        roc_analysis = create_roc_analysis(
+            name=name,
+            description=description,
+            true_labels=true_labels,
+            predicted_probs=pred_probs,
+            default_threshold=threshold,
+            db=db
+        )
+        
+        return {
+            "id": roc_analysis.id,
+            "name": roc_analysis.name, 
+            "auc_score": roc_analysis.auc_score
+        }
+    
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error processing file: {str(e)}")
+
+@router.get("/roc-analysis/{analysis_id}/confusion-matrices")
+def get_confusion_matrices(analysis_id: int, db: Session = Depends(get_db)):
+    """Get confusion matrices for a specific ROC analysis"""
+    matrices = db.query(ConfusionMatrix).filter(ConfusionMatrix.roc_analysis_id == analysis_id).all()
+    if not matrices:
+        raise HTTPException(status_code=404, detail="No confusion matrices found")
+    
+    return matrices

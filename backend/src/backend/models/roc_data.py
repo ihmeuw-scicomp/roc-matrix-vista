@@ -2,7 +2,7 @@ from sqlalchemy import Column, Integer, String, Float, ForeignKey, JSON
 from sqlalchemy.orm import relationship
 from typing import List, Dict
 
-from backend.db.base_class import Base
+from backend.db import Base
 
 class ROCAnalysis(Base):
     __tablename__ = "roc_analyses"

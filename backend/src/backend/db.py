@@ -1,32 +1,33 @@
-from sqlalchemy import create_engine
+from sqlalchemy import create_engine, Column, Integer
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker
 from contextlib import contextmanager
 from typing import Generator
-import os
+from backend.config import settings
 
-# Get database URL from environment variable or use default
-DATABASE_URL = os.environ.get("DATABASE_URL", "postgresql://postgres:postgres@localhost/roc_matrix_vista")
-
-# Create SQLAlchemy engine
-engine = create_engine(DATABASE_URL)
+# Create engine
+engine = create_engine(settings.DATABASE_URL)
 
 # Create sessionmaker
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 
-# Dependency to get DB session
+# Define Base class
+Base = declarative_base()
+
+class BaseClass:
+    id = Column(Integer, primary_key=True, index=True)
+
+# Dependency for FastAPI
 def get_db() -> Generator:
-    """Provides a database session for FastAPI dependency injection"""
     db = SessionLocal()
     try:
         yield db
     finally:
         db.close()
 
-# Context manager for database sessions (for scripts, etc.)
+# Context manager for scripts
 @contextmanager
 def db_session():
-    """Context manager for database sessions"""
     session = SessionLocal()
     try:
         yield session
@@ -35,4 +36,4 @@ def db_session():
         session.rollback()
         raise
     finally:
-        session.close()
+        session.close() 

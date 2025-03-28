@@ -49,17 +49,17 @@ This is the FastAPI backend for the ROC Matrix Vista application, which provides
 
 1. Install dependencies:
    ```
-   pip install fastapi uvicorn numpy
+   pip install -e .
    ```
 
 2. Run the server:
    ```
-   python main.py
+   python -m backend.main
    ```
    
    Alternatively, you can use Uvicorn directly:
    ```
-   uvicorn main:app --reload --host 0.0.0.0 --port 8000
+   uvicorn backend.main:app --reload --host 0.0.0.0 --port 8000
    ```
 
 3. The server will be available at http://localhost:8000

@@ -40,4 +40,4 @@ def delete_roc_analysis(db: Session, analysis_id: int) -> bool:
     # SQLAlchemy will cascade delete the confusion matrices
     db.delete(analysis)
     db.commit()
-    return True
+    return True 

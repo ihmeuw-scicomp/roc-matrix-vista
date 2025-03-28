@@ -11,8 +11,8 @@ export const fetchMetrics = async (threshold: number = 0.5): Promise<MetricsResp
     // Add artificial delay for consistent UX
     await new Promise(resolve => setTimeout(resolve, API_DELAY));
     
-    // Use relative path to go through the Vite proxy
-    const response = await axios.get('/api/metrics', {
+    // Use relative path to go through the Vite proxy - updated to use specific analysis endpoint
+    const response = await axios.get('/api/analyses/1/metrics', {
       params: { threshold }
     });
     
