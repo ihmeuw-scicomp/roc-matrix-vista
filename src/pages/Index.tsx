@@ -30,7 +30,17 @@ const Index = () => {
   });
 
   // Default empty matrix
-  const emptyMatrix: ConfusionMatrixData = { TP: 0, FP: 0, TN: 0, FN: 0 };
+  const emptyMatrix: ConfusionMatrixData = { 
+    true_positives: 0, 
+    false_positives: 0, 
+    true_negatives: 0, 
+    false_negatives: 0,
+    accuracy: 0,
+    precision: 0,
+    recall: 0,
+    f1_score: 0,
+    threshold: 0
+  };
 
   // Error state
   if (isError) {
@@ -80,8 +90,8 @@ const Index = () => {
           <Box sx={{ flex: 3 }}>
             <ThresholdInfo
               threshold={threshold}
-              tpr={data?.current_metrics.tpr}
-              fpr={data?.current_metrics.fpr}
+              tpr={data?.current_metrics?.tpr}
+              fpr={data?.current_metrics?.fpr}
             />
           </Box>
         </Box>

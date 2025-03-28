@@ -1,38 +1,33 @@
 from sqlalchemy import Column, Integer, String, Float, ForeignKey, JSON
 from sqlalchemy.orm import relationship
-from typing import List, Dict
 
 from backend.db import Base
 
 class ROCAnalysis(Base):
     __tablename__ = "roc_analyses"
-    
+
     id = Column(Integer, primary_key=True, index=True)
-    name = Column(String, index=True)
+    name = Column(String, nullable=False)
     description = Column(String, nullable=True)
-    default_threshold = Column(Float, default=0.5)
-    roc_curve_data = Column(JSON)
-    auc_score = Column(Float)
+    auc_score = Column(Float, nullable=False)
+    default_threshold = Column(Float, nullable=False, default=0.5)
+    roc_curve_data = Column(JSON, nullable=False)
     
-    confusion_matrices = relationship("ConfusionMatrix", back_populates="roc_analysis")
-    
+    confusion_matrices = relationship("ConfusionMatrix", back_populates="roc_analysis", cascade="all, delete")
+
 class ConfusionMatrix(Base):
     __tablename__ = "confusion_matrices"
-    
+
     id = Column(Integer, primary_key=True, index=True)
     roc_analysis_id = Column(Integer, ForeignKey("roc_analyses.id"))
-    threshold = Column(Float)
-    
-    # Confusion matrix values
-    true_positives = Column(Integer)
-    false_positives = Column(Integer)
-    true_negatives = Column(Integer)
-    false_negatives = Column(Integer)
-    
-    # Derived metrics
-    accuracy = Column(Float)
-    precision = Column(Float)
-    recall = Column(Float)
-    f1_score = Column(Float)
+    threshold = Column(Float, nullable=False)
+    true_positives = Column(Integer, nullable=False)
+    false_positives = Column(Integer, nullable=False)
+    true_negatives = Column(Integer, nullable=False)
+    false_negatives = Column(Integer, nullable=False)
+    precision = Column(Float, nullable=False)
+    recall = Column(Float, nullable=False)
+    f1_score = Column(Float, nullable=False)
+    accuracy = Column(Float, nullable=False)
     
     roc_analysis = relationship("ROCAnalysis", back_populates="confusion_matrices")

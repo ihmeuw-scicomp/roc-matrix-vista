@@ -20,7 +20,7 @@ export interface MetricsResponse {
   threshold: number;
   roc_curve: ROCPoint[];
   confusion_matrix: ConfusionMatrixData;
-  current_metrics?: {
+  current_metrics: {
     tpr: number;
     fpr: number;
   };

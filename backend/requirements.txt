@@ -1,12 +1,14 @@
 # Core dependencies
-fastapi>=0.95.0
-uvicorn>=0.21.1
-numpy>=1.22.0
-sqlalchemy>=2.0.0
+fastapi>=0.103.1
+uvicorn>=0.23.2
+numpy>=1.24.0
+sqlalchemy>=2.0.21
 psycopg2-binary>=2.9.5
 python-dotenv>=1.0.0
+pydantic>=2.0.0
 pydantic-settings>=2.0.0
 pandas>=2.0.0
+scikit-learn>=1.2.0
 
 # Development dependencies
 pytest>=7.0.0

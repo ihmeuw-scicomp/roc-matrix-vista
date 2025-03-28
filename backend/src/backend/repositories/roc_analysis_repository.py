@@ -9,7 +9,7 @@ def get_roc_analysis(db: Session, analysis_id: int) -> Optional[ROCAnalysis]:
 
 def get_all_roc_analyses(db: Session, skip: int = 0, limit: int = 100) -> List[ROCAnalysis]:
     """Get all ROC analyses with pagination"""
-    return db.query(ROCAnalysis).offset(skip).limit(limit).all()
+    return db.query(ROCAnalysis).order_by(ROCAnalysis.id.desc()).offset(skip).limit(limit).all()
 
 def get_confusion_matrix(db: Session, analysis_id: int, threshold: float) -> Optional[ConfusionMatrix]:
     """Get confusion matrix for a specific analysis and threshold"""
@@ -19,25 +19,24 @@ def get_confusion_matrix(db: Session, analysis_id: int, threshold: float) -> Opt
     ).first()
 
 def get_closest_confusion_matrix(db: Session, analysis_id: int, threshold: float) -> Optional[ConfusionMatrix]:
-    """Get the confusion matrix with the closest threshold to the requested value"""
-    matrices = db.query(ConfusionMatrix).filter(
-        ConfusionMatrix.roc_analysis_id == analysis_id
-    ).all()
-    
-    if not matrices:
-        return None
-    
-    # Find the matrix with the closest threshold
-    closest = min(matrices, key=lambda m: abs(m.threshold - threshold))
-    return closest
-
-def delete_roc_analysis(db: Session, analysis_id: int) -> bool:
-    """Delete a ROC analysis and its associated confusion matrices"""
+    """Get the confusion matrix with the closest threshold value for a given analysis"""
     analysis = get_roc_analysis(db, analysis_id)
     if not analysis:
+        return None
+        
+    closest_matrix = db.query(ConfusionMatrix)\
+        .filter(ConfusionMatrix.roc_analysis_id == analysis_id)\
+        .order_by(abs(ConfusionMatrix.threshold - threshold))\
+        .first()
+    
+    return closest_matrix
+
+def delete_roc_analysis(db: Session, analysis_id: int) -> bool:
+    """Delete a ROC analysis by ID"""
+    analysis = get_roc_analysis(db, analysis_id)
+    if analysis is None:
         return False
     
-    # SQLAlchemy will cascade delete the confusion matrices
     db.delete(analysis)
     db.commit()
-    return True 
+    return True

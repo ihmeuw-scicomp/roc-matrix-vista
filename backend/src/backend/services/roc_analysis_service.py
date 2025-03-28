@@ -1,6 +1,6 @@
 import numpy as np
 import pandas as pd
-from typing import List, Dict, Tuple
+from typing import List, Dict, Tuple, Any, Optional
 from sqlalchemy.orm import Session
 from sklearn.metrics import roc_curve, auc, confusion_matrix, accuracy_score, precision_score, recall_score, f1_score
 from collections import Counter
@@ -137,6 +137,16 @@ def find_column_by_suffix(df, suffix):
     """
     matching_columns = [col for col in df.columns if col.endswith(suffix)]
     return matching_columns[0] if matching_columns else None
+
+def process_dataframe(df: pd.DataFrame) -> pd.DataFrame:
+    """Process the input dataframe to standardize column names and values"""
+    # Copy the dataframe to avoid modifying the original
+    processed_df = df.copy()
+    
+    # Handle common operations like standardizing column names
+    processed_df.columns = [col.strip() for col in processed_df.columns]
+    
+    return processed_df
 
 def process_dataframe(df, method='average', config=None):
     """

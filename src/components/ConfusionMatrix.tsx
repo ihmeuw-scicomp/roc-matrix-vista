@@ -22,7 +22,11 @@ const ConfusionMatrix: React.FC<ConfusionMatrixProps> = ({
   className,
   isLoading = false,
 }) => {
-  const { TP, FP, TN, FN } = data;
+  // Map backend properties to frontend properties
+  const TP = data.true_positives;
+  const FP = data.false_positives;
+  const TN = data.true_negatives;
+  const FN = data.false_negatives;
   const total = TP + FP + TN + FN;
 
   // Calculate percentages for visual representation
@@ -31,11 +35,11 @@ const ConfusionMatrix: React.FC<ConfusionMatrixProps> = ({
   const fpPercent = Math.round((FP / total) * 100);
   const tnPercent = Math.round((TN / total) * 100);
 
-  // Derived metrics
-  const accuracy = (((TP + TN) / total) * 100).toFixed(1);
-  const precision = ((TP / (TP + FP)) * 100).toFixed(1);
-  const recall = ((TP / (TP + FN)) * 100).toFixed(1);
-  const f1Score = ((2 * TP / (2 * TP + FP + FN)) * 100).toFixed(1);
+  // Derived metrics (using values from the API response if available)
+  const accuracy = data.accuracy ? (data.accuracy * 100).toFixed(1) : (((TP + TN) / total) * 100).toFixed(1);
+  const precision = data.precision ? (data.precision * 100).toFixed(1) : ((TP / (TP + FP)) * 100).toFixed(1);
+  const recall = data.recall ? (data.recall * 100).toFixed(1) : ((TP / (TP + FN)) * 100).toFixed(1);
+  const f1Score = data.f1_score ? (data.f1_score * 100).toFixed(1) : ((2 * TP / (2 * TP + FP + FN)) * 100).toFixed(1);
 
   // Define color shades for mapping percentages
   const shades = ['50', '100', '200', '300', '400', '500', '600', '700', '800', '900'];
