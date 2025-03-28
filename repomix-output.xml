@@ -1,0 +1,2525 @@
+This file is a merged representation of the entire codebase, combined into a single document by Repomix.
+
+<file_summary>
+This section contains a summary of this file.
+
+<purpose>
+This file contains a packed representation of the entire repository's contents.
+It is designed to be easily consumable by AI systems for analysis, code review,
+or other automated processes.
+</purpose>
+
+<file_format>
+The content is organized as follows:
+1. This summary section
+2. Repository information
+3. Directory structure
+4. Repository files, each consisting of:
+  - File path as an attribute
+  - Full contents of the file
+</file_format>
+
+<usage_guidelines>
+- This file should be treated as read-only. Any changes should be made to the
+  original repository files, not this packed version.
+- When processing this file, use the file path to distinguish
+  between different files in the repository.
+- Be aware that this file may contain sensitive information. Handle it with
+  the same level of security as you would the original repository.
+</usage_guidelines>
+
+<notes>
+- Some files may have been excluded based on .gitignore rules and Repomix's configuration
+- Binary files are not included in this packed representation. Please refer to the Repository Structure section for a complete list of file paths, including binary files
+- Files matching patterns in .gitignore are excluded
+- Files matching default ignore patterns are excluded
+- Files are sorted by Git change count (files with more changes are at the bottom)
+</notes>
+
+<additional_info>
+
+</additional_info>
+
+</file_summary>
+
+<directory_structure>
+backend/
+  db/
+    session.py
+  models/
+    roc_data.py
+  services/
+    roc_analysis_service.py
+  backend-README.md
+  main.py
+public/
+  placeholder.svg
+  robots.txt
+src/
+  components/
+    ConfusionMatrix.tsx
+    Header.tsx
+    Layout.tsx
+    MuiLayout.tsx
+    ROCCurve.tsx
+    ThresholdInfo.tsx
+    ThresholdSlider.tsx
+  hooks/
+    use-mobile.tsx
+    use-toast.ts
+  lib/
+    utils.ts
+  pages/
+    Index.tsx
+    NotFound.tsx
+  services/
+    api.ts
+  types/
+    index.ts
+  App.css
+  App.tsx
+  index.css
+  main.tsx
+  theme.ts
+  vite-env.d.ts
+.gitignore
+components.json
+eslint.config.js
+index.html
+package.json
+README.md
+tsconfig.app.json
+tsconfig.json
+tsconfig.node.json
+vite.config.ts
+</directory_structure>
+
+<files>
+This section contains the contents of the repository's files.
+
+<file path="backend/db/session.py">
+from sqlalchemy import create_engine
+from sqlalchemy.ext.declarative import declarative_base
+from sqlalchemy.orm import sessionmaker
+
+from backend.core.config import settings
+
+engine = create_engine(settings.DATABASE_URI)
+SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
+Base = declarative_base()
+
+def get_db():
+    db = SessionLocal()
+    try:
+        yield db
+    finally:
+        db.close()
+</file>
+
+<file path="backend/models/roc_data.py">
+from sqlalchemy import Column, Integer, String, Float, ForeignKey, JSON
+from sqlalchemy.orm import relationship
+from typing import List, Dict
+
+from backend.db.base_class import Base
+
+class ROCAnalysis(Base):
+    __tablename__ = "roc_analyses"
+    
+    id = Column(Integer, primary_key=True, index=True)
+    name = Column(String, index=True)
+    description = Column(String, nullable=True)
+    default_threshold = Column(Float, default=0.5)
+    roc_curve_data = Column(JSON)
+    auc_score = Column(Float)
+    
+    confusion_matrices = relationship("ConfusionMatrix", back_populates="roc_analysis")
+    
+class ConfusionMatrix(Base):
+    __tablename__ = "confusion_matrices"
+    
+    id = Column(Integer, primary_key=True, index=True)
+    roc_analysis_id = Column(Integer, ForeignKey("roc_analyses.id"))
+    threshold = Column(Float)
+    
+    # Confusion matrix values
+    true_positives = Column(Integer)
+    false_positives = Column(Integer)
+    true_negatives = Column(Integer)
+    false_negatives = Column(Integer)
+    
+    # Derived metrics
+    accuracy = Column(Float)
+    precision = Column(Float)
+    recall = Column(Float)
+    f1_score = Column(Float)
+    
+    roc_analysis = relationship("ROCAnalysis", back_populates="confusion_matrices")
+</file>
+
+<file path="backend/backend-README.md">
+# ROC Matrix Vista Backend
+
+This is the FastAPI backend for the ROC Matrix Vista application, which provides data processing for ROC curves and confusion matrices.
+
+## Features
+
+- Generates synthetic probability and label data for demo purposes
+- Calculates ROC curve points (TPR-FPR pairs) for different thresholds
+- Computes confusion matrix metrics (TP, FP, TN, FN) for a given threshold
+- Provides exact TPR/FPR metrics at the specified threshold
+- Optimized implementation with precomputed ROC data
+
+## API Endpoints
+
+- `GET /api/metrics` - Get ROC curve data and confusion matrix with default threshold (0.5)
+- `GET /api/metrics?threshold=<value>` - Get ROC curve data and confusion matrix for a specific threshold
+
+## Response Format
+
+```json
+{
+  "threshold": 0.5,
+  "roc_curve": [
+    { "threshold": 0.0, "tpr": 1.0, "fpr": 1.0 },
+    { "threshold": 0.1, "tpr": 0.98, "fpr": 0.85 },
+    ...
+  ],
+  "confusion_matrix": {
+    "TP": 250,
+    "FP": 120,
+    "TN": 580,
+    "FN": 50
+  },
+  "current_metrics": {
+    "tpr": 0.833,
+    "fpr": 0.171
+  }
+}
+```
+
+## Requirements
+
+- Python 3.9+
+- FastAPI
+- Uvicorn
+- NumPy
+
+## Setup and Installation
+
+1. Install dependencies:
+   ```
+   pip install fastapi uvicorn numpy
+   ```
+
+2. Run the server:
+   ```
+   python main.py
+   ```
+   
+   Alternatively, you can use Uvicorn directly:
+   ```
+   uvicorn main:app --reload --host 0.0.0.0 --port 8000
+   ```
+
+3. The server will be available at http://localhost:8000
+
+## API Documentation
+
+FastAPI automatically generates interactive API documentation:
+
+- Swagger UI: http://localhost:8000/docs
+- ReDoc: http://localhost:8000/redoc
+
+## Development
+
+- The backend generates synthetic data on startup for demo purposes
+- The ROC curve is precomputed once on startup for performance
+- Confusion matrix data is computed on-the-fly for each threshold request
+</file>
+
+<file path="backend/main.py">
+from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
+
+from backend.core.config import settings
+from backend.routers import roc_analysis
+
+app = FastAPI(title=settings.PROJECT_NAME)
+
+# Set up CORS
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],  # Adjust for production
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
+# Include routers
+app.include_router(roc_analysis.router, prefix=settings.API_V1_STR)
+
+@app.get("/")
+def root():
+    return {"message": "Welcome to ROC Matrix Vista API"}
+
+if __name__ == "__main__":
+    import uvicorn
+    uvicorn.run(app, host="0.0.0.0", port=8000)
+</file>
+
+<file path="public/placeholder.svg">
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="1200" fill="none"><rect width="1200" height="1200" fill="#EAEAEA" rx="3"/><g opacity=".5"><g opacity=".5"><path fill="#FAFAFA" d="M600.709 736.5c-75.454 0-136.621-61.167-136.621-136.62 0-75.454 61.167-136.621 136.621-136.621 75.453 0 136.62 61.167 136.62 136.621 0 75.453-61.167 136.62-136.62 136.62Z"/><path stroke="#C9C9C9" stroke-width="2.418" d="M600.709 736.5c-75.454 0-136.621-61.167-136.621-136.62 0-75.454 61.167-136.621 136.621-136.621 75.453 0 136.62 61.167 136.62 136.621 0 75.453-61.167 136.62-136.62 136.62Z"/></g><path stroke="url(#a)" stroke-width="2.418" d="M0-1.209h553.581" transform="scale(1 -1) rotate(45 1163.11 91.165)"/><path stroke="url(#b)" stroke-width="2.418" d="M404.846 598.671h391.726"/><path stroke="url(#c)" stroke-width="2.418" d="M599.5 795.742V404.017"/><path stroke="url(#d)" stroke-width="2.418" d="m795.717 796.597-391.441-391.44"/><path fill="#fff" d="M600.709 656.704c-31.384 0-56.825-25.441-56.825-56.824 0-31.384 25.441-56.825 56.825-56.825 31.383 0 56.824 25.441 56.824 56.825 0 31.383-25.441 56.824-56.824 56.824Z"/><g clip-path="url(#e)"><path fill="#666" fill-rule="evenodd" d="M616.426 586.58h-31.434v16.176l3.553-3.554.531-.531h9.068l.074-.074 8.463-8.463h2.565l7.18 7.181V586.58Zm-15.715 14.654 3.698 3.699 1.283 1.282-2.565 2.565-1.282-1.283-5.2-5.199h-6.066l-5.514 5.514-.073.073v2.876a2.418 2.418 0 0 0 2.418 2.418h26.598a2.418 2.418 0 0 0 2.418-2.418v-8.317l-8.463-8.463-7.181 7.181-.071.072Zm-19.347 5.442v4.085a6.045 6.045 0 0 0 6.046 6.045h26.598a6.044 6.044 0 0 0 6.045-6.045v-7.108l1.356-1.355-1.282-1.283-.074-.073v-17.989h-38.689v23.43l-.146.146.146.147Z" clip-rule="evenodd"/></g><path stroke="#C9C9C9" stroke-width="2.418" d="M600.709 656.704c-31.384 0-56.825-25.441-56.825-56.824 0-31.384 25.441-56.825 56.825-56.825 31.383 0 56.824 25.441 56.824 56.825 0 31.383-25.441 56.824-56.824 56.824Z"/></g><defs><linearGradient id="a" x1="554.061" x2="-.48" y1=".083" y2=".087" gradientUnits="userSpaceOnUse"><stop stop-color="#C9C9C9" stop-opacity="0"/><stop offset=".208" stop-color="#C9C9C9"/><stop offset=".792" stop-color="#C9C9C9"/><stop offset="1" stop-color="#C9C9C9" stop-opacity="0"/></linearGradient><linearGradient id="b" x1="796.912" x2="404.507" y1="599.963" y2="599.965" gradientUnits="userSpaceOnUse"><stop stop-color="#C9C9C9" stop-opacity="0"/><stop offset=".208" stop-color="#C9C9C9"/><stop offset=".792" stop-color="#C9C9C9"/><stop offset="1" stop-color="#C9C9C9" stop-opacity="0"/></linearGradient><linearGradient id="c" x1="600.792" x2="600.794" y1="403.677" y2="796.082" gradientUnits="userSpaceOnUse"><stop stop-color="#C9C9C9" stop-opacity="0"/><stop offset=".208" stop-color="#C9C9C9"/><stop offset=".792" stop-color="#C9C9C9"/><stop offset="1" stop-color="#C9C9C9" stop-opacity="0"/></linearGradient><linearGradient id="d" x1="404.85" x2="796.972" y1="403.903" y2="796.02" gradientUnits="userSpaceOnUse"><stop stop-color="#C9C9C9" stop-opacity="0"/><stop offset=".208" stop-color="#C9C9C9"/><stop offset=".792" stop-color="#C9C9C9"/><stop offset="1" stop-color="#C9C9C9" stop-opacity="0"/></linearGradient><clipPath id="e"><path fill="#fff" d="M581.364 580.535h38.689v38.689h-38.689z"/></clipPath></defs></svg>
+</file>
+
+<file path="public/robots.txt">
+User-agent: Googlebot
+Allow: /
+
+User-agent: Bingbot
+Allow: /
+
+User-agent: Twitterbot
+Allow: /
+
+User-agent: facebookexternalhit
+Allow: /
+
+User-agent: *
+Allow: /
+</file>
+
+<file path="src/components/Header.tsx">
+import React from "react";
+import { cn } from "@/lib/utils";
+
+interface HeaderProps {
+  className?: string;
+}
+
+const Header: React.FC<HeaderProps> = ({ className }) => {
+  return (
+    <header className={cn("w-full py-6 px-8 flex justify-between items-center", className)}>
+      <div className="flex items-center space-x-2">
+        <div className="w-8 h-8 rounded-lg bg-primary flex items-center justify-center">
+          <svg 
+            width="18" 
+            height="18" 
+            viewBox="0 0 24 24" 
+            fill="none" 
+            xmlns="http://www.w3.org/2000/svg"
+            className="text-primary-foreground"
+          >
+            <path 
+              d="M3 9H21M7 3V5M17 3V5M6 12H10V16H6V12ZM14 12H18V16H14V12Z" 
+              stroke="currentColor" 
+              strokeWidth="2" 
+              strokeLinecap="round" 
+              strokeLinejoin="round"
+            />
+          </svg>
+        </div>
+        <div>
+          <h1 className="text-xl font-medium tracking-tight">Matrix Vista</h1>
+          <p className="text-xs text-muted-foreground">Interactive ROC Analysis</p>
+        </div>
+      </div>
+      
+      <div className="hidden md:flex items-center">
+        <a 
+          href="https://en.wikipedia.org/wiki/Receiver_operating_characteristic" 
+          target="_blank" 
+          rel="noopener noreferrer"
+          className="text-sm text-muted-foreground hover:text-foreground transition-colors"
+        >
+          Learn about ROC curves
+        </a>
+      </div>
+    </header>
+  );
+};
+
+export default Header;
+</file>
+
+<file path="src/components/Layout.tsx">
+import React from "react";
+import Header from "./Header";
+import { cn } from "@/lib/utils";
+
+interface LayoutProps {
+  children: React.ReactNode;
+  className?: string;
+}
+
+const Layout: React.FC<LayoutProps> = ({ children, className }) => {
+  return (
+    <div className="min-h-screen flex flex-col bg-background">
+      <Header />
+      <main className={cn("flex-1 container mx-auto px-4 pb-12", className)}>
+        {children}
+      </main>
+      <footer className="py-6 px-8 border-t border-border">
+        <div className="container mx-auto">
+          <div className="flex flex-col md:flex-row justify-between items-center">
+            <div className="text-sm text-muted-foreground mb-4 md:mb-0">
+              © {new Date().getFullYear()} Matrix Vista. All rights reserved.
+            </div>
+            <div className="flex space-x-6">
+              <span className="text-sm text-muted-foreground">Made with precision</span>
+            </div>
+          </div>
+        </div>
+      </footer>
+    </div>
+  );
+};
+
+export default Layout;
+</file>
+
+<file path="src/hooks/use-mobile.tsx">
+import * as React from "react"
+
+const MOBILE_BREAKPOINT = 768
+
+export function useIsMobile() {
+  const [isMobile, setIsMobile] = React.useState<boolean | undefined>(undefined)
+
+  React.useEffect(() => {
+    const mql = window.matchMedia(`(max-width: ${MOBILE_BREAKPOINT - 1}px)`)
+    const onChange = () => {
+      setIsMobile(window.innerWidth < MOBILE_BREAKPOINT)
+    }
+    mql.addEventListener("change", onChange)
+    setIsMobile(window.innerWidth < MOBILE_BREAKPOINT)
+    return () => mql.removeEventListener("change", onChange)
+  }, [])
+
+  return !!isMobile
+}
+</file>
+
+<file path="src/hooks/use-toast.ts">
+import * as React from "react"
+
+import type {
+  ToastActionElement,
+  ToastProps,
+} from "@/components/ui/toast"
+
+const TOAST_LIMIT = 1
+const TOAST_REMOVE_DELAY = 1000000
+
+type ToasterToast = ToastProps & {
+  id: string
+  title?: React.ReactNode
+  description?: React.ReactNode
+  action?: ToastActionElement
+}
+
+const actionTypes = {
+  ADD_TOAST: "ADD_TOAST",
+  UPDATE_TOAST: "UPDATE_TOAST",
+  DISMISS_TOAST: "DISMISS_TOAST",
+  REMOVE_TOAST: "REMOVE_TOAST",
+} as const
+
+let count = 0
+
+function genId() {
+  count = (count + 1) % Number.MAX_SAFE_INTEGER
+  return count.toString()
+}
+
+type ActionType = typeof actionTypes
+
+type Action =
+  | {
+      type: ActionType["ADD_TOAST"]
+      toast: ToasterToast
+    }
+  | {
+      type: ActionType["UPDATE_TOAST"]
+      toast: Partial<ToasterToast>
+    }
+  | {
+      type: ActionType["DISMISS_TOAST"]
+      toastId?: ToasterToast["id"]
+    }
+  | {
+      type: ActionType["REMOVE_TOAST"]
+      toastId?: ToasterToast["id"]
+    }
+
+interface State {
+  toasts: ToasterToast[]
+}
+
+const toastTimeouts = new Map<string, ReturnType<typeof setTimeout>>()
+
+const addToRemoveQueue = (toastId: string) => {
+  if (toastTimeouts.has(toastId)) {
+    return
+  }
+
+  const timeout = setTimeout(() => {
+    toastTimeouts.delete(toastId)
+    dispatch({
+      type: "REMOVE_TOAST",
+      toastId: toastId,
+    })
+  }, TOAST_REMOVE_DELAY)
+
+  toastTimeouts.set(toastId, timeout)
+}
+
+export const reducer = (state: State, action: Action): State => {
+  switch (action.type) {
+    case "ADD_TOAST":
+      return {
+        ...state,
+        toasts: [action.toast, ...state.toasts].slice(0, TOAST_LIMIT),
+      }
+
+    case "UPDATE_TOAST":
+      return {
+        ...state,
+        toasts: state.toasts.map((t) =>
+          t.id === action.toast.id ? { ...t, ...action.toast } : t
+        ),
+      }
+
+    case "DISMISS_TOAST": {
+      const { toastId } = action
+
+      // ! Side effects ! - This could be extracted into a dismissToast() action,
+      // but I'll keep it here for simplicity
+      if (toastId) {
+        addToRemoveQueue(toastId)
+      } else {
+        state.toasts.forEach((toast) => {
+          addToRemoveQueue(toast.id)
+        })
+      }
+
+      return {
+        ...state,
+        toasts: state.toasts.map((t) =>
+          t.id === toastId || toastId === undefined
+            ? {
+                ...t,
+                open: false,
+              }
+            : t
+        ),
+      }
+    }
+    case "REMOVE_TOAST":
+      if (action.toastId === undefined) {
+        return {
+          ...state,
+          toasts: [],
+        }
+      }
+      return {
+        ...state,
+        toasts: state.toasts.filter((t) => t.id !== action.toastId),
+      }
+  }
+}
+
+const listeners: Array<(state: State) => void> = []
+
+let memoryState: State = { toasts: [] }
+
+function dispatch(action: Action) {
+  memoryState = reducer(memoryState, action)
+  listeners.forEach((listener) => {
+    listener(memoryState)
+  })
+}
+
+type Toast = Omit<ToasterToast, "id">
+
+function toast({ ...props }: Toast) {
+  const id = genId()
+
+  const update = (props: ToasterToast) =>
+    dispatch({
+      type: "UPDATE_TOAST",
+      toast: { ...props, id },
+    })
+  const dismiss = () => dispatch({ type: "DISMISS_TOAST", toastId: id })
+
+  dispatch({
+    type: "ADD_TOAST",
+    toast: {
+      ...props,
+      id,
+      open: true,
+      onOpenChange: (open) => {
+        if (!open) dismiss()
+      },
+    },
+  })
+
+  return {
+    id: id,
+    dismiss,
+    update,
+  }
+}
+
+function useToast() {
+  const [state, setState] = React.useState<State>(memoryState)
+
+  React.useEffect(() => {
+    listeners.push(setState)
+    return () => {
+      const index = listeners.indexOf(setState)
+      if (index > -1) {
+        listeners.splice(index, 1)
+      }
+    }
+  }, [state])
+
+  return {
+    ...state,
+    toast,
+    dismiss: (toastId?: string) => dispatch({ type: "DISMISS_TOAST", toastId }),
+  }
+}
+
+export { useToast, toast }
+</file>
+
+<file path="src/App.css">
+#root {
+  max-width: 1280px;
+  margin: 0 auto;
+  padding: 2rem;
+  text-align: center;
+}
+
+.logo {
+  height: 6em;
+  padding: 1.5em;
+  will-change: filter;
+  transition: filter 300ms;
+}
+.logo:hover {
+  filter: drop-shadow(0 0 2em #646cffaa);
+}
+.logo.react:hover {
+  filter: drop-shadow(0 0 2em #61dafbaa);
+}
+
+@keyframes logo-spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  a:nth-of-type(2) .logo {
+    animation: logo-spin infinite 20s linear;
+  }
+}
+
+.card {
+  padding: 2em;
+}
+
+.read-the-docs {
+  color: #888;
+}
+</file>
+
+<file path="src/main.tsx">
+import { createRoot } from 'react-dom/client'
+import App from './App.tsx'
+import './index.css'
+
+createRoot(document.getElementById("root")!).render(<App />);
+</file>
+
+<file path="src/theme.ts">
+import { createTheme } from '@mui/material/styles';
+
+const theme = createTheme({
+  palette: {
+    primary: {
+      main: '#1976d2', // This is equivalent to primary in your current theme
+    },
+    secondary: {
+      main: '#f5f5f6', // This is similar to your secondary theme
+    },
+    error: {
+      main: '#ff3b30', // Matches your destructive color
+    },
+    background: {
+      default: '#f8f8f8', // Similar to your background color
+      paper: '#ffffff', // Similar to your card background
+    },
+    text: {
+      primary: '#292e36', // Similar to your foreground color
+      secondary: '#71727a', // Similar to your muted foreground
+    },
+  },
+  typography: {
+    fontFamily: [
+      'system-ui',
+      '-apple-system',
+      'BlinkMacSystemFont',
+      'Segoe UI',
+      'Roboto',
+      'Oxygen',
+      'Ubuntu',
+      'Cantarell',
+      'Fira Sans',
+      'Droid Sans',
+      'Helvetica Neue',
+      'sans-serif',
+    ].join(','),
+  },
+  components: {
+    MuiButton: {
+      styleOverrides: {
+        root: {
+          textTransform: 'none',
+          borderRadius: '0.5rem',
+        },
+      },
+    },
+    MuiCard: {
+      styleOverrides: {
+        root: {
+          borderRadius: '0.5rem',
+          boxShadow: '0 1px 3px rgba(0,0,0,0.12), 0 1px 2px rgba(0,0,0,0.24)',
+        },
+      },
+    },
+  },
+});
+
+export default theme;
+</file>
+
+<file path="src/vite-env.d.ts">
+/// <reference types="vite/client" />
+</file>
+
+<file path=".gitignore">
+# Logs
+logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
+
+node_modules
+dist
+dist-ssr
+*.local
+
+# Editor directories and files
+.vscode/*
+!.vscode/extensions.json
+.idea
+.DS_Store
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+</file>
+
+<file path="components.json">
+{
+  "$schema": "https://ui.shadcn.com/schema.json",
+  "style": "default",
+  "rsc": false,
+  "tsx": true,
+  "tailwind": {
+    "config": "tailwind.config.ts",
+    "css": "src/index.css",
+    "baseColor": "slate",
+    "cssVariables": true,
+    "prefix": ""
+  },
+  "aliases": {
+    "components": "@/components",
+    "utils": "@/lib/utils",
+    "ui": "@/components/ui",
+    "lib": "@/lib",
+    "hooks": "@/hooks"
+  }
+}
+</file>
+
+<file path="eslint.config.js">
+import js from "@eslint/js";
+import globals from "globals";
+import reactHooks from "eslint-plugin-react-hooks";
+import reactRefresh from "eslint-plugin-react-refresh";
+import tseslint from "typescript-eslint";
+
+export default tseslint.config(
+  { ignores: ["dist"] },
+  {
+    extends: [js.configs.recommended, ...tseslint.configs.recommended],
+    files: ["**/*.{ts,tsx}"],
+    languageOptions: {
+      ecmaVersion: 2020,
+      globals: globals.browser,
+    },
+    plugins: {
+      "react-hooks": reactHooks,
+      "react-refresh": reactRefresh,
+    },
+    rules: {
+      ...reactHooks.configs.recommended.rules,
+      "react-refresh/only-export-components": [
+        "warn",
+        { allowConstantExport: true },
+      ],
+      "@typescript-eslint/no-unused-vars": "off",
+    },
+  }
+);
+</file>
+
+<file path="index.html">
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>roc-matrix-vista</title>
+    <meta name="description" content="Lovable Generated Project" />
+    <meta name="author" content="Lovable" />
+
+    <meta property="og:title" content="Lovable Generated Project" />
+    <meta property="og:description" content="Lovable Generated Project" />
+    <meta property="og:type" content="website" />
+    <meta property="og:image" content="https://lovable.dev/opengraph-image-p98pqg.png" />
+
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:site" content="@lovable_dev" />
+    <meta name="twitter:image" content="https://lovable.dev/opengraph-image-p98pqg.png" />
+  </head>
+
+  <body>
+    <div id="root"></div>
+    <!-- IMPORTANT: DO NOT REMOVE THIS SCRIPT TAG OR THIS VERY COMMENT! -->
+    <script src="https://cdn.gpteng.co/gptengineer.js" type="module"></script>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>
+</file>
+
+<file path="README.md">
+# Welcome to your Lovable project
+
+## Project info
+
+**URL**: https://lovable.dev/projects/2928b1e9-7e8a-4405-81a2-ea4e5153fc1b
+
+## How can I edit this code?
+
+There are several ways of editing your application.
+
+**Use Lovable**
+
+Simply visit the [Lovable Project](https://lovable.dev/projects/2928b1e9-7e8a-4405-81a2-ea4e5153fc1b) and start prompting.
+
+Changes made via Lovable will be committed automatically to this repo.
+
+**Use your preferred IDE**
+
+If you want to work locally using your own IDE, you can clone this repo and push changes. Pushed changes will also be reflected in Lovable.
+
+The only requirement is having Node.js & npm installed - [install with nvm](https://github.com/nvm-sh/nvm#installing-and-updating)
+
+Follow these steps:
+
+```sh
+# Step 1: Clone the repository using the project's Git URL.
+git clone <YOUR_GIT_URL>
+
+# Step 2: Navigate to the project directory.
+cd <YOUR_PROJECT_NAME>
+
+# Step 3: Install the necessary dependencies.
+npm i
+
+# Step 4: Start the development server with auto-reloading and an instant preview.
+npm run dev
+```
+
+**Edit a file directly in GitHub**
+
+- Navigate to the desired file(s).
+- Click the "Edit" button (pencil icon) at the top right of the file view.
+- Make your changes and commit the changes.
+
+**Use GitHub Codespaces**
+
+- Navigate to the main page of your repository.
+- Click on the "Code" button (green button) near the top right.
+- Select the "Codespaces" tab.
+- Click on "New codespace" to launch a new Codespace environment.
+- Edit files directly within the Codespace and commit and push your changes once you're done.
+
+## What technologies are used for this project?
+
+This project is built with .
+
+- Vite
+- TypeScript
+- React
+- shadcn-ui
+- Tailwind CSS
+
+## How can I deploy this project?
+
+Simply open [Lovable](https://lovable.dev/projects/2928b1e9-7e8a-4405-81a2-ea4e5153fc1b) and click on Share -> Publish.
+
+## I want to use a custom domain - is that possible?
+
+We don't support custom domains (yet). If you want to deploy your project under your own domain then we recommend using Netlify. Visit our docs for more details: [Custom domains](https://docs.lovable.dev/tips-tricks/custom-domain/)
+</file>
+
+<file path="tsconfig.app.json">
+{
+  "compilerOptions": {
+    "target": "ES2020",
+    "useDefineForClassFields": true,
+    "lib": ["ES2020", "DOM", "DOM.Iterable"],
+    "module": "ESNext",
+    "skipLibCheck": true,
+
+    /* Bundler mode */
+    "moduleResolution": "bundler",
+    "allowImportingTsExtensions": true,
+    "isolatedModules": true,
+    "moduleDetection": "force",
+    "noEmit": true,
+    "jsx": "react-jsx",
+
+    /* Linting */
+    "strict": false,
+    "noUnusedLocals": false,
+    "noUnusedParameters": false,
+    "noImplicitAny": false,
+    "noFallthroughCasesInSwitch": false,
+
+    "baseUrl": ".",
+    "paths": {
+      "@/*": ["./src/*"]
+    }
+  },
+  "include": ["src"]
+}
+</file>
+
+<file path="tsconfig.json">
+{
+  "files": [],
+  "references": [
+    { "path": "./tsconfig.app.json" },
+    { "path": "./tsconfig.node.json" }
+  ],
+  "compilerOptions": {
+    "baseUrl": ".",
+    "paths": {
+      "@/*": ["./src/*"]
+    },
+    "noImplicitAny": false,
+    "noUnusedParameters": false,
+    "skipLibCheck": true,
+    "allowJs": true,
+    "noUnusedLocals": false,
+    "strictNullChecks": false
+  }
+}
+</file>
+
+<file path="tsconfig.node.json">
+{
+  "compilerOptions": {
+    "target": "ES2022",
+    "lib": ["ES2023"],
+    "module": "ESNext",
+    "skipLibCheck": true,
+
+    /* Bundler mode */
+    "moduleResolution": "bundler",
+    "allowImportingTsExtensions": true,
+    "isolatedModules": true,
+    "moduleDetection": "force",
+    "noEmit": true,
+
+    /* Linting */
+    "strict": true,
+    "noUnusedLocals": false,
+    "noUnusedParameters": false,
+    "noFallthroughCasesInSwitch": true
+  },
+  "include": ["vite.config.ts"]
+}
+</file>
+
+<file path="backend/services/roc_analysis_service.py">
+import numpy as np
+import pandas as pd
+from typing import List, Dict, Tuple, Optional, Union
+from sqlalchemy.orm import Session
+import matplotlib.pyplot as plt
+from sklearn.metrics import roc_curve, auc, confusion_matrix, accuracy_score, precision_score, recall_score, f1_score
+import seaborn as sns
+from collections import Counter
+
+from backend.models.roc_data import ROCAnalysis, ConfusionMatrix
+from backend.db.session import get_db
+
+def num_iter(col_lst):
+    """
+    Determine the number of iterations from column names by finding the maximum
+    numeric suffix in the column names.
+    
+    Args:
+        col_lst: List of column names
+        
+    Returns:
+        int: Maximum iteration number
+    """
+    num_lst = []
+    for name in col_lst:
+        suffix = name.split('_')[-1]
+        if suffix.isdigit() and len(suffix) < 2:
+            num_lst.append(suffix)
+    
+    return int(max(num_lst)) if num_lst else 0
+
+def get_column(data_frame):
+    """
+    Returns the prefixes of columns that have 'confidence' in their name.
+    
+    Parameters:
+    data_frame (pd.DataFrame): Input DataFrame
+    
+    Returns:
+    list: List of unique prefixes from column names containing 'confidence'
+    """
+    # Find all columns with 'confidence' in their name
+    confidence_cols = [col for col in data_frame.columns if 'confidence' in col.lower()]
+    
+    # Handle case where no confidence columns exist
+    if not confidence_cols:
+        return []
+    
+    # Extract prefixes from all confidence columns
+    prefixes = []
+    for col in confidence_cols:
+        parts = col.split('_confidence_')
+        if len(parts) > 0:
+            prefixes.append(parts[0])
+    
+    # Return unique prefixes
+    return list(set(prefixes))
+
+def avg_conf_correction(majority_label, conf_df, name_df):
+    """
+    Calculate adjusted average confidence based on majority label.
+    
+    Args:
+        majority_label: The majority label in the data
+        conf_df: List of confidence scores
+        name_df: List of labels
+        
+    Returns:
+        float: Adjusted average confidence score
+    """
+    numerator = []
+    for i in range(len(conf_df)):
+        if majority_label != name_df[i]: 
+            conf_num = 1 - conf_df[i]
+            numerator.append(conf_num)
+        else:
+            conf_num = conf_df[i]
+            numerator.append(conf_num)
+    return sum(numerator) / len(conf_df) if len(conf_df) > 0 else 0
+
+def avg_con(name, num, data_frame, config=None):
+    """
+    Compute average confidence and majority label for a set of columns.
+    
+    Args:
+        name: Base name of the columns
+        num: Number of iterations
+        data_frame: Pandas DataFrame with a single row
+        config: Configuration dictionary with optional settings
+        
+    Returns:
+        tuple: (average_confidence, majority_label)
+    """
+    # Initialize config with defaults if not provided
+    if config is None:
+        config = {
+            'default_confidence': 0.5,
+            'default_label': 'unknown'
+        }
+    
+    name_lst = [name + '_' + str(x+1) for x in range(num)]
+    conf_lst = [name + '_confidence_' + str(x+1) for x in range(num)]
+    
+    # Check if all required columns exist
+    missing_cols = [col for col in name_lst + conf_lst if col not in data_frame.columns]
+    if missing_cols:
+        # Return default values if columns are missing
+        return (config['default_confidence'], config['default_label'])
+    
+    # Get the majority label
+    all_labels = [data_frame[col].iloc[0].strip() for col in name_lst]
+    majority_label = Counter(all_labels).most_common(1)[0][0]
+    
+    # Handle missing confidence values
+    if data_frame.loc[:, conf_lst].isnull().any(axis=1).values[0]:
+        mean_conf = data_frame.loc[:, conf_lst].mean(axis=1, skipna=True).values[0]
+        new_frame = data_frame.loc[:, conf_lst].fillna(mean_conf)
+        conf_df = new_frame.loc[:, conf_lst].values[0]
+        name_df = data_frame.loc[:, name_lst].values[0]
+        name_df = [i.strip() for i in name_df]
+    else:
+        conf_df = data_frame.loc[:, conf_lst].values[0]
+        name_df = data_frame.loc[:, name_lst].values[0]
+        name_df = [i.strip() for i in name_df]
+
+    avg_confidence = avg_conf_correction(majority_label, conf_df, name_df)
+    return (avg_confidence, majority_label)
+
+def process_dataframe(df, method='average', config=None):
+    """
+    Process a DataFrame with dynamic column detection and configurable settings.
+    
+    Parameters:
+    df (pd.DataFrame): Input DataFrame
+    method (str): Processing method ('average', 'majority', etc.)
+    config (dict): Configuration dictionary with optional settings
+    
+    Returns:
+    pd.DataFrame: Processed DataFrame
+    """
+    # Initialize config with defaults if not provided
+    if config is None:
+        config = {
+            'confidence_pattern': 'confidence',
+            'label_pattern': '_label',
+            'positive_labels': ['yes', 'Include', 'positive'],
+            'threshold': 0.5,
+            'default_confidence': 0.5,
+            'default_label': 'unknown'
+        }
+    
+    result_df = df.copy()
+    
+    # Dynamically detect column groups
+    column_groups = detect_column_groups(result_df, config['confidence_pattern'])
+    
+    # Process each column group based on method
+    for prefix, iter_count in column_groups.items():
+        # Apply the specified method
+        if method.lower() == 'average':
+            # Add confidence column
+            result_df[prefix + "_confidence"] = result_df.apply(
+                lambda row: avg_con(prefix, iter_count, pd.DataFrame([row]), config)[0], 
+                axis=1
+            )
+            # Add label column
+            result_df[prefix + "_label"] = result_df.apply(
+                lambda row: avg_con(prefix, iter_count, pd.DataFrame([row]), config)[1], 
+                axis=1
+            )
+        elif method.lower() == 'majority':
+            # Implement majority method if needed
+            pass
+        # Add other methods as needed
+    
+    # Adjust probabilities based on labels
+    result_df = adjust_probabilities(result_df, config)
+    
+    # Add binary prediction column
+    result_df = add_prediction(result_df, config['threshold'])
+    
+    return result_df
+
+def detect_column_groups(df, confidence_pattern):
+    """
+    Dynamically detect column groups and their iteration counts.
+    
+    Returns:
+    dict: {prefix: iteration_count} for each group
+    """
+    groups = {}
+    confidence_cols = [col for col in df.columns if confidence_pattern in col.lower()]
+    
+    for col in confidence_cols:
+        parts = col.split('_' + confidence_pattern + '_')
+        if len(parts) == 2 and parts[1].isdigit():
+            prefix = parts[0]
+            num = int(parts[1])
+            groups[prefix] = max(groups.get(prefix, 0), num)
+    
+    return groups
+
+def adjust_probabilities(df, config):
+    """
+    Adjust probabilities based on labels to ensure they represent 
+    the probability of the positive class.
+    """
+    result_df = df.copy()
+    
+    # Find all label columns
+    label_cols = [col for col in result_df.columns if config['label_pattern'] in col]
+    
+    for label_col in label_cols:
+        # Find matching confidence column
+        prefix = label_col.replace(config['label_pattern'], '')
+        conf_col = prefix + "_confidence"
+        
+        if conf_col in result_df.columns:
+            # Ensure confidence values are numeric
+            result_df[conf_col] = pd.to_numeric(result_df[conf_col], errors='coerce').fillna(config['default_confidence'])
+            
+            # Create adjusted confidence column
+            adj_col = f"{conf_col}_adjusted"
+            result_df[adj_col] = result_df.apply(
+                lambda row: row[conf_col] 
+                if row[label_col].strip().lower() in [l.lower() for l in config['positive_labels']]
+                else 1 - row[conf_col], 
+                axis=1
+            )
+    
+    return result_df
+
+def add_prediction(df, threshold=0.5):
+    """
+    Add binary prediction columns based on adjusted confidence
+    """
+    result_df = df.copy()
+    
+    for col in result_df.columns:
+        if '_adjusted' in col:
+            pred_col = col.replace('_adjusted', '_prediction')
+            result_df[pred_col] = result_df[col].apply(lambda x: 1 if x >= threshold else 0)
+    
+    return result_df
+
+def compute_roc_curve(y_true: np.ndarray, y_score: np.ndarray) -> List[Dict]:
+    """
+    Compute ROC curve points using scikit-learn, formatting the result 
+    as a list of dictionaries suitable for JSON serialization.
+    
+    This is primarily a wrapper around sklearn.metrics.roc_curve that formats
+    the output for database storage.
+    
+    Args:
+        y_true: Array of true binary labels
+        y_score: Array of predicted probabilities
+        
+    Returns:
+        List[Dict]: ROC curve points with threshold, TPR, and FPR values
+    """
+    # Use sklearn's implementation directly
+    fpr, tpr, thresholds = roc_curve(y_true, y_score)
+    
+    # Format the results as a list of dictionaries for database storage
+    roc_points = [
+        {
+            "threshold": float(thresholds[i]),
+            "tpr": float(tpr[i]),
+            "fpr": float(fpr[i])
+        }
+        for i in range(len(thresholds))
+    ]
+    
+    # Add the point (1,1) if it's not already included
+    if len(roc_points) > 0 and roc_points[-1]["threshold"] > 0:
+        roc_points.append({
+            "threshold": 0.0,
+            "tpr": 1.0,
+            "fpr": 1.0
+        })
+    
+    return roc_points
+
+def compute_auc(roc_points: List[Dict]) -> float:
+    """
+    Calculate AUC from ROC points using scikit-learn's auc function.
+    
+    This is primarily a wrapper that extracts FPR and TPR values from
+    our dictionary format and passes them to sklearn.metrics.auc.
+    
+    Args:
+        roc_points: List of dictionaries with TPR and FPR values
+        
+    Returns:
+        float: Area Under the ROC Curve
+    """
+    if not roc_points:
+        return 0.0
+    
+    # Extract FPR and TPR values from our dictionary format
+    fpr = [point["fpr"] for point in roc_points]
+    tpr = [point["tpr"] for point in roc_points]
+    
+    # Use scikit-learn's AUC function directly
+    return float(auc(fpr, tpr))
+
+# Alternatively, we could create a more direct function that doesn't require the intermediate format
+def calculate_roc_auc(y_true: np.ndarray, y_score: np.ndarray) -> Tuple[List[Dict], float]:
+    """
+    Directly calculate both ROC curve points and AUC score from raw data.
+    This eliminates the need for separate compute_roc_curve and compute_auc calls.
+    
+    Args:
+        y_true: Array of true binary labels
+        y_score: Array of predicted probabilities
+        
+    Returns:
+        Tuple[List[Dict], float]: (roc_points, auc_score)
+    """
+    # Get ROC curve data using sklearn
+    fpr, tpr, thresholds = roc_curve(y_true, y_score)
+    
+    # Calculate AUC directly
+    roc_auc = auc(fpr, tpr)
+    
+    # Format ROC points for database storage
+    roc_points = [
+        {
+            "threshold": float(thresholds[i]),
+            "tpr": float(tpr[i]),
+            "fpr": float(fpr[i])
+        }
+        for i in range(len(thresholds))
+    ]
+    
+    # Add the point (1,1) if it's not already included
+    if len(roc_points) > 0 and roc_points[-1]["threshold"] > 0:
+        roc_points.append({
+            "threshold": 0.0,
+            "tpr": 1.0,
+            "fpr": 1.0
+        })
+    
+    return roc_points, float(roc_auc)
+
+# Update create_roc_analysis to use the new function
+def create_roc_analysis(
+    name: str,
+    description: str,
+    true_labels: np.ndarray,
+    predicted_probs: np.ndarray,
+    default_threshold: float = 0.5,
+    db: Session = None
+) -> ROCAnalysis:
+    """Create and save a new ROC analysis with confusion matrices."""
+    if db is None:
+        db = next(get_db())
+    
+    # Use the combined function to get both ROC points and AUC score
+    roc_points, auc_score = calculate_roc_auc(true_labels, predicted_probs)
+    
+    # Create ROC analysis object
+    roc_analysis = ROCAnalysis(
+        name=name,
+        description=description,
+        default_threshold=default_threshold,
+        roc_curve_data=roc_points,
+        auc_score=auc_score
+    )
+    
+    # Add to database
+    db.add(roc_analysis)
+    db.commit()
+    db.refresh(roc_analysis)
+    
+    # Generate confusion matrices for important thresholds
+    thresholds = [0.1, 0.3, 0.5, 0.7, 0.9]
+    # Also include the default threshold if not in list
+    if default_threshold not in thresholds:
+        thresholds.append(default_threshold)
+        thresholds.sort()
+    
+    for threshold in thresholds:
+        cm_data = compute_confusion_matrix(true_labels, predicted_probs, threshold)
+        cm = ConfusionMatrix(
+            roc_analysis_id=roc_analysis.id,
+            threshold=threshold,
+            **cm_data
+        )
+        db.add(cm)
+    
+    db.commit()
+    return roc_analysis
+
+def compute_confusion_matrix(y_true: np.ndarray, y_score: np.ndarray, threshold: float) -> Dict:
+    """
+    Compute confusion matrix and related metrics at a specified threshold.
+    
+    Args:
+        y_true: Array of true binary labels
+        y_score: Array of predicted probabilities
+        threshold: Threshold to apply for binary classification
+        
+    Returns:
+        Dict: Dictionary containing confusion matrix data and metrics
+    """
+    # Convert probabilities to binary predictions using threshold
+    y_pred = (y_score >= threshold).astype(int)
+    
+    # Calculate confusion matrix
+    tn, fp, fn, tp = confusion_matrix(y_true, y_pred).ravel()
+    
+    # Calculate additional metrics
+    accuracy = accuracy_score(y_true, y_pred)
+    precision = precision_score(y_true, y_pred, zero_division=0)
+    recall = recall_score(y_true, y_pred, zero_division=0)
+    f1 = f1_score(y_true, y_pred, zero_division=0)
+    
+    return {
+        "true_negatives": int(tn),
+        "false_positives": int(fp),
+        "false_negatives": int(fn),
+        "true_positives": int(tp),
+        "accuracy": float(accuracy),
+        "precision": float(precision),
+        "recall": float(recall),
+        "f1_score": float(f1)
+    }
+</file>
+
+<file path="src/components/MuiLayout.tsx">
+import React, { ReactNode } from "react";
+import { AppBar, Toolbar, Typography, Container, Box } from "@mui/material";
+
+interface LayoutProps {
+  children: ReactNode;
+}
+
+const MuiLayout: React.FC<LayoutProps> = ({ children }) => {
+  return (
+    <Box sx={{ display: "flex", flexDirection: "column", minHeight: "100vh" }}>
+      <AppBar position="static" color="default" elevation={1}>
+        <Toolbar sx={{ justifyContent: 'space-between' }}>
+          <Box sx={{ display: 'flex', alignItems: 'center' }}>
+            {/* Logo - Using placeholder.svg from public directory */}
+            <Box sx={{ mr: 2 }}>
+              <img src="/placeholder.svg" alt="Matrix Vista" width={32} height={32} />
+            </Box>
+            <Typography variant="h6" color="inherit" noWrap>
+              Matrix Vista
+            </Typography>
+          </Box>
+          <a
+            href="https://en.wikipedia.org/wiki/Receiver_operating_characteristic"
+            target="_blank"
+            rel="noopener noreferrer"
+            style={{ textDecoration: 'none', color: 'inherit' }}
+          >
+            Learn about ROC curves
+          </a>
+        </Toolbar>
+      </AppBar>
+      
+      <Container maxWidth="lg" sx={{ mt: 4, mb: 4, flex: 1 }}>
+        {children}
+      </Container>
+      
+      <Box component="footer" sx={{ py: 2, bgcolor: "background.paper", borderTop: 1, borderColor: "divider" }}>
+        <Container maxWidth="lg">
+          <Typography variant="body2" color="text.secondary" align="center">
+            © {new Date().getFullYear()} ROC Matrix Vista
+          </Typography>
+        </Container>
+      </Box>
+    </Box>
+  );
+};
+
+export default MuiLayout;
+</file>
+
+<file path="src/components/ThresholdInfo.tsx">
+import React from 'react';
+import {
+  Card,
+  CardContent,
+  Typography,
+  Box
+} from '@mui/material';
+
+interface ThresholdInfoProps {
+  threshold: number;
+  tpr?: number;
+  fpr?: number;
+}
+
+const ThresholdInfo: React.FC<ThresholdInfoProps> = ({ threshold, tpr, fpr }) => {
+  return (
+    <Card>
+      <CardContent>
+        {/* Title */}
+        <Typography variant="h6" gutterBottom>
+          Threshold Impact
+        </Typography>
+
+        {/* Threshold & Current Point */}
+        <Box
+          display="flex"
+          justifyContent="space-between"
+          alignItems="flex-start"
+          mb={2}
+        >
+          {/* Threshold Box */}
+          <Box>
+            <Typography variant="subtitle2" color="text.secondary">
+              Threshold:
+            </Typography>
+            <Typography variant="h3">
+              {threshold.toFixed(2)}
+            </Typography>
+          </Box>
+
+          {/* Current Point Box */}
+          <Box textAlign="right">
+            <Typography variant="subtitle2" color="text.secondary">
+              Current Point:
+            </Typography>
+            <Box display="flex" justifyContent="flex-end" mt={0.5}>
+              <Box mr={3} textAlign="center">
+                <Typography variant="subtitle2" color="text.secondary">
+                  TPR
+                </Typography>
+                <Typography variant="h5">
+                  {tpr !== undefined ? tpr.toFixed(3) : '...'}
+                </Typography>
+              </Box>
+              <Box textAlign="center">
+                <Typography variant="subtitle2" color="text.secondary">
+                  FPR
+                </Typography>
+                <Typography variant="h5">
+                  {fpr !== undefined ? fpr.toFixed(3) : '...'}
+                </Typography>
+              </Box>
+            </Box>
+          </Box>
+        </Box>
+
+        {/* Explanation */}
+        <Typography variant="subtitle2" gutterBottom>
+          Understanding the threshold:
+        </Typography>
+        <Typography variant="body2" color="text.secondary">
+          A higher threshold value means the model requires more confidence to classify a sample as positive,
+          resulting in fewer false positives but more false negatives. A lower threshold will classify more samples
+          as positive, increasing true positives but also false positives.
+        </Typography>
+      </CardContent>
+    </Card>
+  );
+};
+
+export default ThresholdInfo;
+</file>
+
+<file path="src/lib/utils.ts">
+import { clsx, type ClassValue } from "clsx"
+
+export function cn(...inputs: ClassValue[]) {
+  return clsx(inputs)
+}
+</file>
+
+<file path="src/services/api.ts">
+import { MetricsResponse } from "@/types";
+// ... existing code ...
+
+// Use Axios to connect to the FastAPI backend
+import axios from 'axios';
+
+const API_DELAY = 150; // Maintain delay for consistent UX
+
+export const fetchMetrics = async (threshold: number = 0.5): Promise<MetricsResponse> => {
+  try {
+    // Add artificial delay for consistent UX
+    await new Promise(resolve => setTimeout(resolve, API_DELAY));
+    
+    // Use relative path to go through the Vite proxy
+    const response = await axios.get('/api/metrics', {
+      params: { threshold }
+    });
+    
+    return response.data;
+  } catch (error) {
+    console.error('Error fetching metrics:', error);
+    throw error;
+  }
+};
+</file>
+
+<file path="src/types/index.ts">
+export interface ROCPoint {
+  threshold: number;
+  tpr: number;
+  fpr: number;
+}
+
+export interface ConfusionMatrixData {
+  TP: number;
+  FP: number;
+  TN: number;
+  FN: number;
+}
+
+export interface MetricsResponse {
+  threshold: number;
+  roc_curve: ROCPoint[];
+  confusion_matrix: ConfusionMatrixData;
+  current_metrics: {
+    tpr: number;
+    fpr: number;
+  };
+}
+</file>
+
+<file path="vite.config.ts">
+import { defineConfig } from "vite";
+import react from "@vitejs/plugin-react-swc";
+import path from "path";
+
+// https://vitejs.dev/config/
+export default defineConfig(({ mode }) => ({
+  server: {
+    host: "::",
+    port: 8080,
+    proxy: {
+      '/api': {
+        target: 'http://localhost:8000', // FastAPI default port
+        changeOrigin: true,
+      }
+    }
+  },
+  plugins: [
+    react(),
+  ],
+  resolve: {
+    alias: {
+      "@": path.resolve(__dirname, "./src"),
+    },
+  },
+}));
+</file>
+
+<file path="src/components/ROCCurve.tsx">
+import React, { useEffect, useRef } from "react";
+import { Card, CardContent, CardHeader, Typography } from "@mui/material";
+import { cn } from "@/lib/utils";
+import { ROCPoint } from "@/types";
+
+interface ROCCurveProps {
+  rocData: ROCPoint[];
+  currentThreshold: number;
+  currentPoint?: { tpr: number; fpr: number };
+  onThresholdSelect?: (threshold: number) => void;
+  className?: string;
+  isLoading?: boolean;
+}
+
+const ROCCurve: React.FC<ROCCurveProps> = ({
+  rocData,
+  currentThreshold,
+  currentPoint,
+  onThresholdSelect,
+  className,
+  isLoading = false,
+}) => {
+  const chartRef = useRef<HTMLDivElement>(null);
+  
+  useEffect(() => {
+    // Dynamically import Plotly to avoid SSR issues
+    const loadPlotly = async () => {
+      if (chartRef.current && rocData.length > 0) {
+        try {
+          const Plotly = await import('plotly.js-dist-min');
+          
+          // Find the closest point to current threshold
+          const closestPoint = rocData.reduce((prev, curr) => {
+            return Math.abs(curr.threshold - currentThreshold) < Math.abs(prev.threshold - currentThreshold) 
+              ? curr 
+              : prev;
+          }, rocData[0]);
+          
+          // Use either the provided currentPoint (from API) or the closest point from rocData
+          const pointToShow = currentPoint || { 
+            tpr: closestPoint.tpr, 
+            fpr: closestPoint.fpr 
+          };
+          
+          // Prepare data for the ROC curve
+          const trace1 = {
+            x: rocData.map(point => point.fpr),
+            y: rocData.map(point => point.tpr),
+            mode: 'lines',
+            type: 'scatter',
+            name: 'ROC Curve',
+            line: {
+              color: 'rgba(0, 122, 255, 0.8)',
+              width: 2.5
+            },
+            hoverinfo: 'text',
+            text: rocData.map(point => 
+              `Threshold: ${point.threshold.toFixed(2)}<br>` +
+              `True Positive Rate: ${point.tpr.toFixed(3)}<br>` +
+              `False Positive Rate: ${point.fpr.toFixed(3)}`
+            )
+          };
+          
+          // Diagonal reference line (random classifier)
+          const trace2 = {
+            x: [0, 1],
+            y: [0, 1],
+            mode: 'lines',
+            type: 'scatter',
+            name: 'Random',
+            line: {
+              color: 'rgba(180, 180, 180, 0.5)',
+              width: 1.5,
+              dash: 'dash'
+            },
+            hoverinfo: 'none'
+          };
+          
+          // Current threshold point marker
+          const trace3 = {
+            x: [pointToShow.fpr],
+            y: [pointToShow.tpr],
+            mode: 'markers',
+            type: 'scatter',
+            name: `Threshold: ${currentThreshold.toFixed(2)}`,
+            marker: {
+              color: 'rgba(255, 59, 48, 1)',
+              size: 10
+            },
+            hoverinfo: 'text',
+            text: [
+              `Threshold: ${currentThreshold.toFixed(2)}<br>` +
+              `True Positive Rate: ${pointToShow.tpr.toFixed(3)}<br>` +
+              `False Positive Rate: ${pointToShow.fpr.toFixed(3)}`
+            ]
+          };
+          
+          const data = [trace1, trace2, trace3];
+          const layout = {
+            title: '',
+            xaxis: {
+              title: 'False Positive Rate',
+              range: [-0.02, 1.02],
+              zeroline: false,
+              gridcolor: 'rgba(180, 180, 180, 0.1)'
+            },
+            yaxis: {
+              title: 'True Positive Rate',
+              range: [-0.02, 1.02],
+              zeroline: false,
+              gridcolor: 'rgba(180, 180, 180, 0.1)'
+            },
+            margin: {
+              l: 60,
+              r: 30,
+              b: 60,
+              t: 10,
+            },
+            showlegend: true,
+            legend: {
+              x: 1,
+              y: 0,
+              xanchor: 'right',
+              yanchor: 'bottom',
+              bgcolor: 'rgba(255, 255, 255, 0.7)',
+              bordercolor: 'rgba(0, 0, 0, 0.1)',
+              borderwidth: 1
+            },
+            plot_bgcolor: 'rgba(0, 0, 0, 0)',
+            paper_bgcolor: 'rgba(0, 0, 0, 0)',
+            hovermode: 'closest',
+            shapes: [
+              {
+                type: 'path',
+                path: `M 0,0 ${trace1.x.map((x, i) => `L ${x},${trace1.y[i]}`).join(' ')} L 1,0 Z`,
+                fillcolor: 'rgba(0, 122, 255, 0.1)',
+                line: { width: 0 }
+              }
+            ],
+            annotations: [
+              {
+                x: 0.5,                  // Centers the text horizontally (0.5 is the middle of the plot width)
+                y: 0.05,                 // Positions the text near the bottom (5% from the bottom edge)
+                xref: 'paper',           // References the x-coordinate to the plot's paper (entire plotting area)
+                yref: 'paper',           // References the y-coordinate to the plot's paper
+                text: `AUC: ${calculateAUC(rocData).toFixed(3)}`,  // The AUC text with calculated value
+                showarrow: false,        // No arrow, as we’re just placing text
+                xanchor: 'center',       // Anchors the text’s center at x: 0.5
+                yanchor: 'bottom',       // Anchors the text’s bottom at y: 0.05, so it extends upward
+                font: {
+                  family: 'Arial',       // Font styling
+                  size: 14,
+                  color: 'rgba(0, 0, 0, 0.7)'
+                },
+                bgcolor: 'rgba(255, 255, 255, 0.7)',  // Background color with transparency
+                bordercolor: 'rgba(0, 0, 0, 0.1)',    // Border color
+                borderwidth: 1,                       // Border thickness
+                borderpad: 4,                         // Padding inside the border
+                borderradius: 4                       // Rounded border corners
+              }
+            ]
+          };
+          
+          const config = {
+            responsive: true,
+            displayModeBar: false
+          };
+          
+          Plotly.newPlot(chartRef.current, data, layout, config);
+          
+          // Cleanup function
+          return () => {
+            if (chartRef.current) {
+              Plotly.purge(chartRef.current);
+            }
+          };
+        } catch (error) {
+          console.error('Error loading Plotly:', error);
+        }
+      }
+    };
+    
+    loadPlotly();
+  }, [rocData, currentThreshold, currentPoint]);
+  
+  // Calculate Area Under Curve using trapezoidal rule
+  function calculateAUC(rocPoints: ROCPoint[]): number {
+    if (!rocPoints.length) return 0;
+    
+    let auc = 0;
+    const sortedPoints = [...rocPoints].sort((a, b) => a.fpr - b.fpr);
+    
+    for (let i = 1; i < sortedPoints.length; i++) {
+      const width = sortedPoints[i].fpr - sortedPoints[i-1].fpr;
+      const height = (sortedPoints[i].tpr + sortedPoints[i-1].tpr) / 2;
+      auc += width * height;
+    }
+    
+    return auc;
+  }
+
+  return (
+    <Card className={cn("fade-up", className)}>
+      <CardHeader title={<Typography variant="h6">ROC Curve</Typography>} />
+      <CardContent>
+        <div 
+          className={isLoading ? "chart-container loading" : "chart-container"}
+        >
+          <div ref={chartRef} style={{ width: '100%', height: '100%' }} />
+        </div>
+      </CardContent>
+    </Card>
+  );
+};
+
+export default ROCCurve;
+</file>
+
+<file path="src/components/ThresholdSlider.tsx">
+import React from "react";
+import { Slider, Box, Card, CardContent, Typography } from "@mui/material";
+
+interface ThresholdSliderProps {
+  value: number;
+  onChange: (value: number) => void;
+}
+
+const ThresholdSlider: React.FC<ThresholdSliderProps> = ({ value, onChange }) => {
+  const handleValueChange = (event: Event, newValue: number | number[]) => {
+    onChange(newValue as number);
+  };
+
+  return (
+    <Card sx={{ minHeight: 200 /* adjust to match ThresholdInfo's height */ }}>
+      <CardContent>
+        <Typography variant="body2" color="text.secondary" gutterBottom>
+          <strong>Threshold:</strong>
+        </Typography>
+        <Typography variant="body2" color="text.secondary" gutterBottom>
+          {value.toFixed(2)}
+        </Typography>
+        <Typography variant="body2" color="text.secondary" gutterBottom align="right">
+          Adjust to see results
+        </Typography>
+        <Box
+          sx={{
+            width: '100%',
+            maxWidth: 600,
+            // You can increase the minHeight if you want even more space
+            minHeight: 80,
+            display: 'flex',
+            alignItems: 'center',
+            px: 3, // Add horizontal padding
+          }}
+        >
+          <Slider
+            value={value}
+            min={0}
+            max={1}
+            step={0.01}
+            onChange={handleValueChange}
+            marks={[
+              { value: 0, label: '0.00' },
+              { value: 0.25, label: '0.25' },
+              { value: 0.5, label: '0.50' },
+              { value: 0.75, label: '0.75' },
+              { value: 1, label: '1.00' },
+            ]}
+            valueLabelDisplay="auto"
+          />
+        </Box>
+      </CardContent>
+    </Card>
+  );
+};
+
+export default ThresholdSlider;
+</file>
+
+<file path="src/pages/NotFound.tsx">
+import { useLocation } from "react-router-dom";
+import { useEffect } from "react";
+import { Button, Typography, Box, Container } from "@mui/material";
+import MuiLayout from "@/components/MuiLayout";
+
+const NotFound = () => {
+  const location = useLocation();
+
+  useEffect(() => {
+    console.error(
+      "404 Error: User attempted to access non-existent route:",
+      location.pathname
+    );
+  }, [location.pathname]);
+
+  return (
+    <MuiLayout>
+      <Container maxWidth="sm">
+        <Box 
+          sx={{ 
+            minHeight: "70vh", 
+            display: "flex", 
+            flexDirection: "column", 
+            alignItems: "center", 
+            justifyContent: "center",
+            textAlign: "center" 
+          }}
+        >
+          <Typography variant="h1" color="primary.light" sx={{ opacity: 0.2, mb: 2, fontWeight: "bold" }}>
+            404
+          </Typography>
+          <Typography variant="h4" gutterBottom>
+            Page not found
+          </Typography>
+          <Typography color="text.secondary" paragraph sx={{ mb: 4 }}>
+            The page you are looking for doesn't exist or has been moved.
+          </Typography>
+          <Button variant="contained" color="primary" href="/">
+            Return to Home
+          </Button>
+        </Box>
+      </Container>
+    </MuiLayout>
+  );
+};
+
+export default NotFound;
+</file>
+
+<file path="src/App.tsx">
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { ThemeProvider } from "@mui/material/styles";
+import CssBaseline from "@mui/material/CssBaseline";
+import { BrowserRouter, Routes, Route } from "react-router-dom";
+import theme from "./theme";
+import Index from "./pages/Index";
+import NotFound from "./pages/NotFound";
+
+// Create a client
+const queryClient = new QueryClient();
+
+const App = () => (
+  <QueryClientProvider client={queryClient}>
+    <ThemeProvider theme={theme}>
+      <CssBaseline />
+      <BrowserRouter>
+        <Routes>
+          <Route path="/" element={<Index />} />
+          {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
+          <Route path="*" element={<NotFound />} />
+        </Routes>
+      </BrowserRouter>
+    </ThemeProvider>
+  </QueryClientProvider>
+);
+
+export default App;
+</file>
+
+<file path="src/index.css">
+body {
+  margin: 0;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
+    'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue',
+    sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* Elegant scrollbar */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: rgba(180, 180, 180, 0.5);
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(150, 150, 150, 0.8);
+}
+
+/* Transition effects */
+.fade-in {
+  animation: fadeIn 0.5s ease-out;
+}
+
+.fade-up {
+  animation: fadeUp 0.5s ease-out;
+}
+
+.chart-container {
+  height: 400px;
+  transition: opacity 0.3s;
+}
+
+.chart-container.loading {
+  opacity: 0.5;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes fadeUp {
+  from { 
+    opacity: 0; 
+    transform: translateY(10px);
+  }
+  to { 
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+</file>
+
+<file path="package.json">
+{
+  "name": "vite_react_shadcn_ts",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "build:dev": "vite build --mode development",
+    "lint": "eslint .",
+    "preview": "vite preview"
+  },
+  "dependencies": {
+    "@emotion/react": "^11.14.0",
+    "@emotion/styled": "^11.14.0",
+    "@hookform/resolvers": "^3.9.0",
+    "@mui/icons-material": "^7.0.0",
+    "@mui/material": "^7.0.0",
+    "@radix-ui/react-accordion": "^1.2.0",
+    "@radix-ui/react-alert-dialog": "^1.1.1",
+    "@radix-ui/react-aspect-ratio": "^1.1.0",
+    "@radix-ui/react-avatar": "^1.1.0",
+    "@radix-ui/react-checkbox": "^1.1.1",
+    "@radix-ui/react-collapsible": "^1.1.0",
+    "@radix-ui/react-context-menu": "^2.2.1",
+    "@radix-ui/react-dialog": "^1.1.2",
+    "@radix-ui/react-dropdown-menu": "^2.1.1",
+    "@radix-ui/react-hover-card": "^1.1.1",
+    "@radix-ui/react-label": "^2.1.0",
+    "@radix-ui/react-menubar": "^1.1.1",
+    "@radix-ui/react-navigation-menu": "^1.2.0",
+    "@radix-ui/react-popover": "^1.1.1",
+    "@radix-ui/react-progress": "^1.1.0",
+    "@radix-ui/react-radio-group": "^1.2.0",
+    "@radix-ui/react-scroll-area": "^1.1.0",
+    "@radix-ui/react-select": "^2.1.1",
+    "@radix-ui/react-separator": "^1.1.0",
+    "@radix-ui/react-slider": "^1.2.0",
+    "@radix-ui/react-slot": "^1.1.0",
+    "@radix-ui/react-switch": "^1.1.0",
+    "@radix-ui/react-tabs": "^1.1.0",
+    "@radix-ui/react-toast": "^1.2.1",
+    "@radix-ui/react-toggle": "^1.1.0",
+    "@radix-ui/react-toggle-group": "^1.1.0",
+    "@radix-ui/react-tooltip": "^1.1.4",
+    "@tanstack/react-query": "^5.56.2",
+    "axios": "^1.8.4",
+    "class-variance-authority": "^0.7.1",
+    "clsx": "^2.1.1",
+    "cmdk": "^1.0.0",
+    "date-fns": "^3.6.0",
+    "embla-carousel-react": "^8.3.0",
+    "input-otp": "^1.2.4",
+    "lucide-react": "^0.462.0",
+    "next-themes": "^0.3.0",
+    "plotly.js-dist-min": "^2.35.3",
+    "react": "^18.3.1",
+    "react-day-picker": "^8.10.1",
+    "react-dom": "^18.3.1",
+    "react-hook-form": "^7.53.0",
+    "react-resizable-panels": "^2.1.3",
+    "react-router-dom": "^6.26.2",
+    "recharts": "^2.12.7",
+    "sonner": "^1.5.0",
+    "vaul": "^0.9.3",
+    "zod": "^3.23.8"
+  },
+  "devDependencies": {
+    "@eslint/js": "^9.9.0",
+    "@types/node": "^22.5.5",
+    "@types/react": "^18.3.3",
+    "@types/react-dom": "^18.3.0",
+    "@vitejs/plugin-react-swc": "^3.5.0",
+    "autoprefixer": "^10.4.20",
+    "eslint": "^9.9.0",
+    "eslint-plugin-react-hooks": "^5.1.0-rc.0",
+    "eslint-plugin-react-refresh": "^0.4.9",
+    "globals": "^15.9.0",
+    "postcss": "^8.4.47",
+    "typescript": "^5.5.3",
+    "typescript-eslint": "^8.0.1",
+    "vite": "^5.4.1"
+  }
+}
+</file>
+
+<file path="src/components/ConfusionMatrix.tsx">
+import React from "react";
+import {
+  Card,
+  CardContent,
+  CardHeader,
+  Typography,
+  Box,
+  Paper,
+  Grid,
+} from "@mui/material";
+import { green, red } from "@mui/material/colors"; // Import Material-UI colors
+import { ConfusionMatrixData } from "@/types";
+
+interface ConfusionMatrixProps {
+  data: ConfusionMatrixData;
+  className?: string;
+  isLoading?: boolean;
+}
+
+const ConfusionMatrix: React.FC<ConfusionMatrixProps> = ({
+  data,
+  className,
+  isLoading = false,
+}) => {
+  const { TP, FP, TN, FN } = data;
+  const total = TP + FP + TN + FN;
+
+  // Calculate percentages for visual representation
+  const tpPercent = Math.round((TP / total) * 100);
+  const fnPercent = Math.round((FN / total) * 100);
+  const fpPercent = Math.round((FP / total) * 100);
+  const tnPercent = Math.round((TN / total) * 100);
+
+  // Derived metrics
+  const accuracy = (((TP + TN) / total) * 100).toFixed(1);
+  const precision = ((TP / (TP + FP)) * 100).toFixed(1);
+  const recall = ((TP / (TP + FN)) * 100).toFixed(1);
+  const f1Score = ((2 * TP / (2 * TP + FP + FN)) * 100).toFixed(1);
+
+  // Define color shades for mapping percentages
+  const shades = ['50', '100', '200', '300', '400', '500', '600', '700', '800', '900'];
+
+  // Function to determine background color based on cell type and percentage
+  const getBackgroundColor = (type: string, percent: number) => {
+    const index = Math.min(Math.floor(percent / 10), 9); // Map 0-100% to index 0-9
+    const shade = shades[index];
+    return type === 'TP' || type === 'TN' ? green[shade] : red[shade];
+  };
+
+  // Function to determine text color based on background shade
+  const getTextColor = (percent: number) => {
+    const index = Math.min(Math.floor(percent / 10), 9);
+    return index <= 4 ? 'text.primary' : 'common.white'; // Dark text for light backgrounds, white for dark
+  };
+
+  return (
+    <Card
+      className={className}
+      sx={{ overflow: "hidden", transition: "all 0.3s" }}
+    >
+      <CardHeader
+        title={<Typography variant="h6">Confusion Matrix</Typography>}
+        sx={{ pb: 1 }}
+      />
+      <CardContent>
+        <Box sx={{ opacity: isLoading ? 0.5 : 1, transition: "opacity 0.3s" }}>
+          <Paper variant="outlined" sx={{ p: 2, mb: 2 }}>
+            {/* Predicted Labels */}
+            <Box display="flex" alignItems="center" mb={2}>
+              <Box width={100} /> {/* Placeholder for top-left empty space */}
+              <Box flex={1} textAlign="center">
+                <Typography variant="subtitle2">
+                  Predicted Positive
+                </Typography>
+              </Box>
+              <Box flex={1} textAlign="center">
+                <Typography variant="subtitle2">
+                  Predicted Negative
+                </Typography>
+              </Box>
+            </Box>
+
+            {/* Actual Positive Row */}
+            <Box display="flex" width="100%" mb={2}>
+              <Box
+                width={100}
+                display="flex"
+                alignItems="center"
+                justifyContent="center"
+                sx={{ transform: "rotate(-90deg)" }}
+              >
+                <Typography variant="subtitle2">Actual Positive</Typography>
+              </Box>
+              {/* True Positive Cell */}
+              <Box
+                flex={1}
+                border={1}
+                borderColor="divider"
+                p={2}
+                textAlign="center"
+                sx={{ backgroundColor: getBackgroundColor('TP', tpPercent) }}
+              >
+                <Typography
+                  variant="body2"
+                  sx={{ color: getTextColor(tpPercent) }}
+                >
+                  True Positive
+                </Typography>
+                <Typography
+                  variant="h4"
+                  sx={{ color: getTextColor(tpPercent) }}
+                >
+                  {TP}
+                </Typography>
+                <Typography
+                  variant="caption"
+                  sx={{ color: getTextColor(tpPercent) }}
+                >
+                  {tpPercent}%
+                </Typography>
+              </Box>
+              {/* False Negative Cell */}
+              <Box
+                flex={1}
+                border={1}
+                borderColor="divider"
+                p={2}
+                textAlign="center"
+                sx={{ backgroundColor: getBackgroundColor('FN', fnPercent) }}
+              >
+                <Typography
+                  variant="body2"
+                  sx={{ color: getTextColor(fnPercent) }}
+                >
+                  False Negative
+                </Typography>
+                <Typography
+                  variant="h4"
+                  sx={{ color: getTextColor(fnPercent) }}
+                >
+                  {FN}
+                </Typography>
+                <Typography
+                  variant="caption"
+                  sx={{ color: getTextColor(fnPercent) }}
+                >
+                  {fnPercent}%
+                </Typography>
+              </Box>
+            </Box>
+
+            {/* Actual Negative Row */}
+            <Box display="flex" width="100%">
+              <Box
+                width={100}
+                display="flex"
+                alignItems="center"
+                justifyContent="center"
+                sx={{ transform: "rotate(-90deg)" }}
+              >
+                <Typography variant="subtitle2">Actual Negative</Typography>
+              </Box>
+              {/* False Positive Cell */}
+              <Box
+                flex={1}
+                border={1}
+                borderColor="divider"
+                p={2}
+                textAlign="center"
+                sx={{ backgroundColor: getBackgroundColor('FP', fpPercent) }}
+              >
+                <Typography
+                  variant="body2"
+                  sx={{ color: getTextColor(fpPercent) }}
+                >
+                  False Positive
+                </Typography>
+                <Typography
+                  variant="h4"
+                  sx={{ color: getTextColor(fpPercent) }}
+                >
+                  {FP}
+                </Typography>
+                <Typography
+                  variant="caption"
+                  sx={{ color: getTextColor(fpPercent) }}
+                >
+                  {fpPercent}%
+                </Typography>
+              </Box>
+              {/* True Negative Cell */}
+              <Box
+                flex={1}
+                border={1}
+                borderColor="divider"
+                p={2}
+                textAlign="center"
+                sx={{ backgroundColor: getBackgroundColor('TN', tnPercent) }}
+              >
+                <Typography
+                  variant="body2"
+                  sx={{ color: getTextColor(tnPercent) }}
+                >
+                  True Negative
+                </Typography>
+                <Typography
+                  variant="h4"
+                  sx={{ color: getTextColor(tnPercent) }}
+                >
+                  {TN}
+                </Typography>
+                <Typography
+                  variant="caption"
+                  sx={{ color: getTextColor(tnPercent) }}
+                >
+                  {tnPercent}%
+                </Typography>
+              </Box>
+            </Box>
+          </Paper>
+
+          {/* Derived Metrics on One Line */}
+          <Grid container spacing={2}>
+            <Box sx={{ flex: 1 }}>
+              <Paper variant="outlined" sx={{ p: 1.5, textAlign: "center" }}>
+                <Typography variant="caption" color="text.secondary">
+                  Accuracy
+                </Typography>
+                <Typography variant="h6">{accuracy}%</Typography>
+              </Paper>
+            </Box>
+            <Box sx={{ flex: 1 }}>
+              <Paper variant="outlined" sx={{ p: 1.5, textAlign: "center" }}>
+                <Typography variant="caption" color="text.secondary">
+                  Precision
+                </Typography>
+                <Typography variant="h6">{precision}%</Typography>
+              </Paper>
+            </Box>
+            <Box sx={{ flex: 1 }}>
+              <Paper variant="outlined" sx={{ p: 1.5, textAlign: "center" }}>
+                <Typography variant="caption" color="text.secondary">
+                  Recall
+                </Typography>
+                <Typography variant="h6">{recall}%</Typography>
+              </Paper>
+            </Box>
+            <Box sx={{ flex: 1 }}>
+              <Paper variant="outlined" sx={{ p: 1.5, textAlign: "center" }}>
+                <Typography variant="caption" color="text.secondary">
+                  F1 Score
+                </Typography>
+                <Typography variant="h6">{f1Score}%</Typography>
+              </Paper>
+            </Box>
+          </Grid>
+        </Box>
+      </CardContent>
+    </Card>
+  );
+};
+
+export default ConfusionMatrix;
+</file>
+
+<file path="src/pages/Index.tsx">
+import React, { useState, useEffect } from "react";
+import { useQuery } from "@tanstack/react-query";
+import MuiLayout from "@/components/MuiLayout";
+import ROCCurve from "@/components/ROCCurve";
+import ConfusionMatrix from "@/components/ConfusionMatrix";
+import ThresholdSlider from "@/components/ThresholdSlider";
+import ThresholdInfo from "@/components/ThresholdInfo";
+import { Card, CardHeader, CardContent, Typography, Box, Grid } from "@mui/material";
+import { fetchMetrics } from "@/services/api";
+import { ConfusionMatrixData } from "@/types";
+
+const Index = () => {
+  const [threshold, setThreshold] = useState(0.5);
+  
+  // Debounce threshold changes
+  const [debouncedThreshold, setDebouncedThreshold] = useState(threshold);
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedThreshold(threshold);
+    }, 100);
+    return () => clearTimeout(timer);
+  }, [threshold]);
+  
+  // Fetch data
+  const { data, isLoading, isError } = useQuery({
+    queryKey: ["metrics", debouncedThreshold],
+    queryFn: () => fetchMetrics(debouncedThreshold),
+    staleTime: 60000,
+    refetchOnWindowFocus: false,
+  });
+
+  // Default empty matrix
+  const emptyMatrix: ConfusionMatrixData = { TP: 0, FP: 0, TN: 0, FN: 0 };
+
+  // Error state
+  if (isError) {
+    return (
+      <MuiLayout>
+        <Box sx={{ p: 3, textAlign: "center" }}>
+          <Typography color="error">
+            Error fetching data. Please try again later.
+          </Typography>
+        </Box>
+      </MuiLayout>
+    );
+  }
+
+  return (
+    <MuiLayout>
+      <Box sx={{ pt: 2 }}>
+        {/* Main Title */}
+        <Card sx={{ mb: 4 }}>
+          <CardHeader
+            title={<Typography variant="h4" fontWeight="medium" textAlign="center">ROC Matrix Vista</Typography>}
+            subheader={<Typography textAlign="center">Visualize and analyze classification performance with ROC curves and confusion matrices</Typography>}
+          />
+          <CardContent>
+            <Typography color="text.secondary" sx={{ textAlign: "center" }}>
+              Adjust the threshold below to see how it affects true positive rate, false positive rate,
+              and overall model performance metrics in real-time.
+            </Typography>
+          </CardContent>
+        </Card>
+
+        {/* Threshold Adjustment Section */}
+        <Box
+          sx={{
+            display: "flex",
+            flexDirection: { xs: "column", md: "row" },
+            gap: 3,
+            my: 4,
+          }}
+        >
+          {/* Slider (occupies 2/5 of the width) */}
+          <Box sx={{ flex: 2 }}>
+            <ThresholdSlider value={threshold} onChange={setThreshold} />
+          </Box>
+
+          {/* Threshold Info (occupies 3/5 of the width) */}
+          <Box sx={{ flex: 3 }}>
+            <ThresholdInfo
+              threshold={threshold}
+              tpr={data?.current_metrics.tpr}
+              fpr={data?.current_metrics.fpr}
+            />
+          </Box>
+        </Box>
+
+        {/* ROC Curve and Confusion Matrix Section */}
+        <Box sx={{ display: 'flex', flexDirection: { xs: 'column', md: 'row' }, gap: 3 }}>
+          <Box sx={{ flex: 1 }}>
+            <ROCCurve
+              rocData={data?.roc_curve || []}
+              currentThreshold={threshold}
+              currentPoint={data?.current_metrics}
+              onThresholdSelect={setThreshold}
+              isLoading={isLoading}
+            />
+          </Box>
+          <Box sx={{ flex: 1 }}>
+            <ConfusionMatrix
+              data={data?.confusion_matrix || emptyMatrix}
+              isLoading={isLoading}
+            />
+          </Box>
+        </Box>
+      </Box>
+    </MuiLayout>
+  );
+};
+
+export default Index;
+</file>
+
+</files>
