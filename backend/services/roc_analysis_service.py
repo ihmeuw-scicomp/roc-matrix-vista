@@ -245,7 +245,11 @@ def add_prediction(df, threshold=0.5):
 
 def compute_roc_curve(y_true: np.ndarray, y_score: np.ndarray) -> List[Dict]:
     """
-    Compute ROC curve points using scikit-learn.
+    Compute ROC curve points using scikit-learn, formatting the result 
+    as a list of dictionaries suitable for JSON serialization.
+    
+    This is primarily a wrapper around sklearn.metrics.roc_curve that formats
+    the output for database storage.
     
     Args:
         y_true: Array of true binary labels
@@ -254,17 +258,18 @@ def compute_roc_curve(y_true: np.ndarray, y_score: np.ndarray) -> List[Dict]:
     Returns:
         List[Dict]: ROC curve points with threshold, TPR, and FPR values
     """
-    # Use sklearn's implementation for efficiency and accuracy
+    # Use sklearn's implementation directly
     fpr, tpr, thresholds = roc_curve(y_true, y_score)
     
-    # Format the results as a list of dictionaries
-    roc_points = []
-    for i in range(len(thresholds)):
-        roc_points.append({
+    # Format the results as a list of dictionaries for database storage
+    roc_points = [
+        {
             "threshold": float(thresholds[i]),
             "tpr": float(tpr[i]),
             "fpr": float(fpr[i])
-        })
+        }
+        for i in range(len(thresholds))
+    ]
     
     # Add the point (1,1) if it's not already included
     if len(roc_points) > 0 and roc_points[-1]["threshold"] > 0:
@@ -278,7 +283,10 @@ def compute_roc_curve(y_true: np.ndarray, y_score: np.ndarray) -> List[Dict]:
 
 def compute_auc(roc_points: List[Dict]) -> float:
     """
-    Calculate AUC from ROC points using the trapezoidal rule.
+    Calculate AUC from ROC points using scikit-learn's auc function.
+    
+    This is primarily a wrapper that extracts FPR and TPR values from
+    our dictionary format and passes them to sklearn.metrics.auc.
     
     Args:
         roc_points: List of dictionaries with TPR and FPR values
@@ -289,48 +297,53 @@ def compute_auc(roc_points: List[Dict]) -> float:
     if not roc_points:
         return 0.0
     
-    # Extract FPR and TPR values
+    # Extract FPR and TPR values from our dictionary format
     fpr = [point["fpr"] for point in roc_points]
     tpr = [point["tpr"] for point in roc_points]
     
-    # Use scikit-learn's AUC function for accuracy
+    # Use scikit-learn's AUC function directly
     return float(auc(fpr, tpr))
 
-def compute_confusion_matrix(y_true: np.ndarray, y_score: np.ndarray, threshold: float) -> Dict:
+# Alternatively, we could create a more direct function that doesn't require the intermediate format
+def calculate_roc_auc(y_true: np.ndarray, y_score: np.ndarray) -> Tuple[List[Dict], float]:
     """
-    Compute confusion matrix metrics for a specific threshold.
+    Directly calculate both ROC curve points and AUC score from raw data.
+    This eliminates the need for separate compute_roc_curve and compute_auc calls.
     
     Args:
         y_true: Array of true binary labels
         y_score: Array of predicted probabilities
-        threshold: Classification threshold
         
     Returns:
-        Dict: Confusion matrix metrics
+        Tuple[List[Dict], float]: (roc_points, auc_score)
     """
-    # Convert probabilities to binary predictions using the threshold
-    y_pred = (y_score >= threshold).astype(int)
+    # Get ROC curve data using sklearn
+    fpr, tpr, thresholds = roc_curve(y_true, y_score)
     
-    # Calculate confusion matrix elements
-    tn, fp, fn, tp = confusion_matrix(y_true, y_pred).ravel()
+    # Calculate AUC directly
+    roc_auc = auc(fpr, tpr)
     
-    # Calculate derived metrics
-    total = tp + fp + tn + fn
-    accuracy = (tp + tn) / total if total > 0 else 0
-    precision = tp / (tp + fp) if (tp + fp) > 0 else 0
-    recall = tp / (tp + fn) if (tp + fn) > 0 else 0
-    f1 = 2 * precision * recall / (precision + recall) if (precision + recall) > 0 else 0
+    # Format ROC points for database storage
+    roc_points = [
+        {
+            "threshold": float(thresholds[i]),
+            "tpr": float(tpr[i]),
+            "fpr": float(fpr[i])
+        }
+        for i in range(len(thresholds))
+    ]
     
-    return {
-        "true_positives": int(tp),
-        "false_positives": int(fp),
-        "true_negatives": int(tn), 
-        "false_negatives": int(fn),
-        "accuracy": float(accuracy),
-        "precision": float(precision),
-        "recall": float(recall),
-        "f1_score": float(f1)
-    }
+    # Add the point (1,1) if it's not already included
+    if len(roc_points) > 0 and roc_points[-1]["threshold"] > 0:
+        roc_points.append({
+            "threshold": 0.0,
+            "tpr": 1.0,
+            "fpr": 1.0
+        })
+    
+    return roc_points, float(roc_auc)
+
+# Update create_roc_analysis to use the new function
 def create_roc_analysis(
     name: str,
     description: str,
@@ -343,9 +356,8 @@ def create_roc_analysis(
     if db is None:
         db = next(get_db())
     
-    # Calculate ROC curve data
-    roc_points = compute_roc_curve(true_labels, predicted_probs)
-    auc_score = compute_auc(roc_points)
+    # Use the combined function to get both ROC points and AUC score
+    roc_points, auc_score = calculate_roc_auc(true_labels, predicted_probs)
     
     # Create ROC analysis object
     roc_analysis = ROCAnalysis(
@@ -379,76 +391,38 @@ def create_roc_analysis(
     
     db.commit()
     return roc_analysis
-def plot_roc_curve(true_labels: np.ndarray, predicted_probs: np.ndarray) -> plt.Figure:
-    """
-    Create and return a ROC curve plot.
-    
-    Args:
-        true_labels: Array of true binary labels
-        predicted_probs: Array of predicted probabilities
-        
-    Returns:
-        matplotlib.figure.Figure: ROC curve plot
-    """
-    # Calculate ROC curve
-    fpr, tpr, thresholds = roc_curve(true_labels, predicted_probs)
-    roc_auc = auc(fpr, tpr)
-    
-    # Find the threshold that maximizes TPR
-    max_tpr_index = np.argmax(tpr)
-    max_threshold = thresholds[max_tpr_index]
-    max_fpr = fpr[max_tpr_index]
-    max_tpr = tpr[max_tpr_index]
-    
-    # Create figure and plot
-    fig = plt.figure(figsize=(8, 6))
-    plt.plot(fpr, tpr, color='darkorange', lw=2, label=f'ROC curve (area = {roc_auc:.2f})')
-    plt.plot([0, 1], [0, 1], color='navy', lw=2, linestyle='--')
-    plt.xlim([0.0, 1.0])
-    plt.ylim([0.0, 1.05])
-    plt.xlabel('False Positive Rate')
-    plt.ylabel('True Positive Rate')
-    plt.title('Receiver Operating Characteristic (ROC) Curve')
-    
-    # Highlight max TPR point
-    plt.scatter(max_fpr, max_tpr, color='red', label='Max TPR Threshold', zorder=5)
-    plt.annotate(
-        f'Threshold: {max_threshold:.2f}\nTPR: {max_tpr:.2f}, FPR: {max_fpr:.2f}',
-        xy=(max_fpr, max_tpr),
-        xytext=(max_fpr + 0.1, max_tpr - 0.1),
-        arrowprops=dict(facecolor='black', arrowstyle='->'),
-        fontsize=10,
-        bbox=dict(boxstyle="round,pad=0.3", edgecolor='gray', facecolor='white', alpha=0.7)
-    )
-    
-    plt.legend(loc='lower right')
-    plt.grid(alpha=0.3)
-    
-    return fig
 
-def plot_threshold_curves(true_labels: np.ndarray, predicted_probs: np.ndarray) -> plt.Figure:
+def compute_confusion_matrix(y_true: np.ndarray, y_score: np.ndarray, threshold: float) -> Dict:
     """
-    Create and return a plot showing TPR and FPR as functions of threshold.
+    Compute confusion matrix and related metrics at a specified threshold.
     
     Args:
-        true_labels: Array of true binary labels
-        predicted_probs: Array of predicted probabilities
+        y_true: Array of true binary labels
+        y_score: Array of predicted probabilities
+        threshold: Threshold to apply for binary classification
         
     Returns:
-        matplotlib.figure.Figure: Threshold curve plot
+        Dict: Dictionary containing confusion matrix data and metrics
     """
-    # Calculate ROC curve
-    fpr, tpr, thresholds = roc_curve(true_labels, predicted_probs)
+    # Convert probabilities to binary predictions using threshold
+    y_pred = (y_score >= threshold).astype(int)
     
-    # Create figure and plot
-    fig = plt.figure(figsize=(8, 6))
-    plt.plot(thresholds, tpr, marker='o', label='TPR')
-    plt.plot(thresholds, fpr, marker='o', label='FPR')
-    plt.xlabel("Threshold")
-    plt.ylabel("Rate")
-    plt.title("TPR and FPR as a Function of Threshold")
-    plt.grid(True)
-    plt.legend()
-    plt.gca().invert_xaxis()  # Invert x-axis as threshold decreases from left to right
+    # Calculate confusion matrix
+    tn, fp, fn, tp = confusion_matrix(y_true, y_pred).ravel()
     
-    return fig
+    # Calculate additional metrics
+    accuracy = accuracy_score(y_true, y_pred)
+    precision = precision_score(y_true, y_pred, zero_division=0)
+    recall = recall_score(y_true, y_pred, zero_division=0)
+    f1 = f1_score(y_true, y_pred, zero_division=0)
+    
+    return {
+        "true_negatives": int(tn),
+        "false_positives": int(fp),
+        "false_negatives": int(fn),
+        "true_positives": int(tp),
+        "accuracy": float(accuracy),
+        "precision": float(precision),
+        "recall": float(recall),
+        "f1_score": float(f1)
+    }
