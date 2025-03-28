@@ -291,14 +291,14 @@ def compute_roc_curve(y_true: np.ndarray, y_score: np.ndarray) -> List[Dict]:
     # Use sklearn's implementation directly
     fpr, tpr, thresholds = roc_curve(y_true, y_score)
     
-    # Format the results as a list of dictionaries for database storage
+    # Format the results as a list of dictionaries for database storage, filtering out infinity values
     roc_points = [
         {
             "threshold": float(thresholds[i]),
             "tpr": float(tpr[i]),
             "fpr": float(fpr[i])
         }
-        for i in range(len(thresholds))
+        for i in range(len(thresholds)) if not np.isinf(thresholds[i])
     ]
     
     # Add the point (1,1) if it's not already included
@@ -353,14 +353,14 @@ def calculate_roc_auc(y_true: np.ndarray, y_score: np.ndarray) -> Tuple[List[Dic
     # Calculate AUC directly
     roc_auc = auc(fpr, tpr)
     
-    # Format ROC points for database storage
+    # Format ROC points for database storage, filtering out infinity values
     roc_points = [
         {
             "threshold": float(thresholds[i]),
             "tpr": float(tpr[i]),
             "fpr": float(fpr[i])
         }
-        for i in range(len(thresholds))
+        for i in range(len(thresholds)) if not np.isinf(thresholds[i])
     ]
     
     # Add the point (1,1) if it's not already included
