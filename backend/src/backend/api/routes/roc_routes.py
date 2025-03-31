@@ -11,8 +11,10 @@ from backend.services.roc_analysis_service import (
     process_dataframe, create_roc_analysis, compute_confusion_matrix
 )
 from backend.repositories.roc_analysis_repository import (
-    get_roc_analysis, get_all_roc_analyses, get_closest_confusion_matrix, delete_roc_analysis
+    get_roc_analysis, get_all_roc_analyses, get_closest_confusion_matrix, delete_roc_analysis,get_or_create_confusion_matrix
 )
+import logging
+logger = logging.getLogger(__name__)
 
 router = APIRouter()
 
@@ -79,13 +81,14 @@ def get_metrics(
     threshold: float = Query(0.5, ge=0.0, le=1.0),
     db: Session = Depends(get_db)
 ):
+    
     """Get metrics for a specific ROC analysis at a given threshold"""
     analysis = get_roc_analysis(db, analysis_id)
     if analysis is None:
         raise HTTPException(status_code=404, detail="Analysis not found")
     
     # Get confusion matrix for this threshold (or closest)
-    confusion_matrix = get_closest_confusion_matrix(db, analysis_id, threshold)
+    confusion_matrix = get_or_create_confusion_matrix(db, analysis_id, threshold)
     if confusion_matrix is None:
         raise HTTPException(status_code=404, detail="No confusion matrix found")
     
@@ -180,6 +183,7 @@ async def create_new_analysis(
 
 @router.get("/roc-analysis/{analysis_id}/confusion-matrices")
 def get_confusion_matrices(analysis_id: int, db: Session = Depends(get_db)):
+    logger.critical("THIS IS A TEST CRITICAL LOG")
     """Get confusion matrices for a specific ROC analysis"""
     matrices = db.query(ConfusionMatrix).filter(ConfusionMatrix.roc_analysis_id == analysis_id).all()
     if not matrices:

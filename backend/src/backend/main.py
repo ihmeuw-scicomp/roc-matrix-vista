@@ -3,10 +3,12 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.middleware.trustedhost import TrustedHostMiddleware
 from fastapi.responses import JSONResponse
 from sqlalchemy.orm import Session
+import logging 
 
 from backend.config import settings
 from backend.api.routes import roc_routes
 from backend.db import engine, Base, get_db
+from backend.utils.logging_config import setup_logging
 from backend.services.roc_analysis_service import (
     create_roc_analysis, 
     process_dataframe,
@@ -14,6 +16,10 @@ from backend.services.roc_analysis_service import (
 )
 from backend.models.roc_data import ROCAnalysis, ConfusionMatrix
 import pandas as pd
+
+setup_logging(log_level=logging.INFO)
+logger = logging.getLogger(__name__)
+
 
 def load_test_data():
     db = next(get_db())

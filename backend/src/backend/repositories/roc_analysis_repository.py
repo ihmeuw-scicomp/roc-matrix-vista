@@ -1,6 +1,7 @@
 from sqlalchemy import func
 from sqlalchemy.orm import Session
 from typing import List, Optional
+import numpy as np
 
 from backend.models.roc_data import ROCAnalysis, ConfusionMatrix
 
@@ -41,3 +42,37 @@ def delete_roc_analysis(db: Session, analysis_id: int) -> bool:
     db.delete(analysis)
     db.commit()
     return True
+
+def get_or_create_confusion_matrix(db: Session, analysis_id: int, threshold: float) -> ConfusionMatrix:
+    """
+    Get an existing confusion matrix or create a new one for the exact threshold.
+    This should be used by the frontend slider to ensure exact threshold matching.
+    """
+    from backend.services.roc_analysis_service import compute_confusion_matrix
+    
+    # Try to find an existing confusion matrix with this exact threshold
+    existing_cm = get_confusion_matrix(db, analysis_id, threshold)
+    if existing_cm:
+        return existing_cm
+    
+    # If not found, compute a new one
+    analysis = get_roc_analysis(db, analysis_id)
+    if not analysis:
+        return None
+        
+    # Compute the confusion matrix using the raw data
+    y_true = np.array(analysis.true_labels)
+    y_score = np.array(analysis.predicted_probs)
+    cm_data = compute_confusion_matrix(y_true, y_score, threshold)
+    
+    # Save this confusion matrix
+    cm = ConfusionMatrix(
+        roc_analysis_id=analysis_id,
+        threshold=threshold,
+        **cm_data
+    )
+    db.add(cm)
+    db.commit()
+    db.refresh(cm)
+    
+    return cm

@@ -389,13 +389,15 @@ def create_roc_analysis(
     # Use the combined function to get both ROC points and AUC score
     roc_points, auc_score = calculate_roc_auc(true_labels, predicted_probs)
     
-    # Create ROC analysis object
+    # Create ROC analysis object and store the raw data as lists
     roc_analysis = ROCAnalysis(
         name=name,
         description=description,
         default_threshold=default_threshold,
         roc_curve_data=roc_points,
-        auc_score=auc_score
+        auc_score=auc_score,
+        true_labels=true_labels.tolist(),  # Store original data for later use
+        predicted_probs=predicted_probs.tolist()
     )
     
     # Add to database

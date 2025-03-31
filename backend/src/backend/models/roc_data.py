@@ -1,5 +1,6 @@
-from sqlalchemy import Column, Integer, String, Float, ForeignKey, JSON
+from sqlalchemy import Column, Integer, String, Float, ForeignKey, JSON, DateTime
 from sqlalchemy.orm import relationship
+from datetime import datetime
 
 from backend.db import Base
 
@@ -12,6 +13,11 @@ class ROCAnalysis(Base):
     auc_score = Column(Float, nullable=False)
     default_threshold = Column(Float, nullable=False, default=0.5)
     roc_curve_data = Column(JSON, nullable=False)
+    created_at = Column(DateTime, default=datetime.utcnow)
+    
+    # New fields to store original data
+    true_labels = Column(JSON, nullable=True)
+    predicted_probs = Column(JSON, nullable=True)
     
     confusion_matrices = relationship("ConfusionMatrix", back_populates="roc_analysis", cascade="all, delete")
 
