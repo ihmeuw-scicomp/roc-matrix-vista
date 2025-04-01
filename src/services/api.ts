@@ -12,14 +12,13 @@ const apiClient = axios.create({
 
 const API_DELAY = 150; // Maintain delay for consistent UX
 
-export const fetchMetrics = async (threshold: number = 0.5): Promise<MetricsResponse> => {
+export const fetchMetrics = async (analysisId: number, threshold: number = 0.5): Promise<MetricsResponse> => {
   try {
     // Add artificial delay for consistent UX
     await new Promise(resolve => setTimeout(resolve, API_DELAY));
     
-    // Use the correct endpoint path that matches the backend route
-    // The backend route is prefixed with API_V1_STR from settings
-    const response = await apiClient.get('/api/v1/analyses/1/metrics', {
+    // Fixed: Using backticks for proper string interpolation and including analysisId
+    const response = await apiClient.get(`/api/v1/analyses/${analysisId}/metrics`, {
       params: { threshold }
     });
     
@@ -28,4 +27,33 @@ export const fetchMetrics = async (threshold: number = 0.5): Promise<MetricsResp
     console.error('Error fetching metrics:', error);
     throw error;
   }
+};
+
+export const uploadData = async (analysisId: number): Promise<{ id: number }> => {
+  const formData = new FormData();
+
+  // Load the CSV file from public directory
+  const response = await fetch("/data/test_data.csv");
+  const blob = await response.blob();
+
+  formData.append("file", blob);
+  formData.append("name", "Auto Analysis");
+  formData.append("description", "Auto-uploaded from analysis page");
+  formData.append("default_threshold", "0.5");
+
+  const res = await apiClient.post(`/api/v1/analyses/${analysisId}/upload-data`, formData, {
+    headers: { "Content-Type": "multipart/form-data" }
+  });
+
+  if (res.status !== 200) throw new Error("Upload failed");
+  return res.data;
+};
+
+export const getAnalysisStatus = async (analysisId: number): Promise<{
+  analysis_id: number;
+  has_roc_data: boolean;
+  has_confusion_matrix: boolean;
+}> => {
+  const response = await apiClient.get(`/api/v1/analyses-status/${analysisId}`);
+  return response.data;
 };

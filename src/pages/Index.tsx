@@ -6,11 +6,13 @@ import ConfusionMatrix from "@/components/ConfusionMatrix";
 import ThresholdSlider from "@/components/ThresholdSlider";
 import ThresholdInfo from "@/components/ThresholdInfo";
 import { Card, CardHeader, CardContent, Typography, Box, Grid } from "@mui/material";
-import { fetchMetrics } from "@/services/api";
+import { fetchMetrics, uploadData, getAnalysisStatus } from "@/services/api";
 import { ConfusionMatrixData } from "@/types";
 
 const Index = () => {
   const [threshold, setThreshold] = useState(0.5);
+  const [analysisId, setAnalysisId] = useState<number | null>(null);
+  const HARDCODED_ANALYSIS_ID = 1;
   
   // Debounce threshold changes
   const [debouncedThreshold, setDebouncedThreshold] = useState(threshold);
@@ -20,13 +22,37 @@ const Index = () => {
     }, 100);
     return () => clearTimeout(timer);
   }, [threshold]);
+
+  useEffect(() => {
+    const initializeAnalysis = async () => {
+      const id = HARDCODED_ANALYSIS_ID;
+      setAnalysisId(id); // ✅ Set right away so UI can use it
+
+      try {
+        
+        const status = await getAnalysisStatus(id);
+        console.log(getAnalysisStatus(id))
+        if (!status.has_roc_data) {
+          console.log("ROC data missing — uploading dataset");
+          await uploadData(id); // Should store data under the same analysisId
+        } else {
+          console.log("Analysis already initialized. Skipping upload.");
+        }
+      } catch (err) {
+        console.error("Failed to get analysis status or upload data:", err);
+      }
+    };
+
+    initializeAnalysis();
+  }, []);
   
   // Fetch data
   const { data, isLoading, isError } = useQuery({
-    queryKey: ["metrics", debouncedThreshold],
-    queryFn: () => fetchMetrics(debouncedThreshold),
+    queryKey: ["metrics", analysisId, debouncedThreshold],
+    queryFn: () => analysisId ? fetchMetrics(analysisId, debouncedThreshold) : null,
     staleTime: 60000,
     refetchOnWindowFocus: false,
+    enabled: !!analysisId // Only run query when analysisId exists
   });
 
   // Default empty matrix

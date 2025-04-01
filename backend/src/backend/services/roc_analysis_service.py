@@ -380,6 +380,7 @@ def create_roc_analysis(
     true_labels: np.ndarray,
     predicted_probs: np.ndarray,
     default_threshold: float = 0.5,
+    id: Optional[int] = None,
     db: Session = None
 ) -> ROCAnalysis:
     """Create and save a new ROC analysis with confusion matrices."""
@@ -391,6 +392,7 @@ def create_roc_analysis(
     
     # Create ROC analysis object and store the raw data as lists
     roc_analysis = ROCAnalysis(
+        id=id,
         name=name,
         description=description,
         default_threshold=default_threshold,

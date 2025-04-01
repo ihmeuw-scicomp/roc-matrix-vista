@@ -1,6 +1,7 @@
 from sqlalchemy import create_engine
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker
+from contextlib import contextmanager
 
 from backend.config import settings
 
@@ -17,3 +18,16 @@ def get_db():
         yield db
     finally:
         db.close()
+
+# Context manager for scripts
+@contextmanager
+def db_session():
+    session = SessionLocal()
+    try:
+        yield session
+        session.commit()
+    except Exception:
+        session.rollback()
+        raise
+    finally:
+        session.close()

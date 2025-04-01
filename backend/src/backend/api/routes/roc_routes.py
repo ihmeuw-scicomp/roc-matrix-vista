@@ -8,7 +8,7 @@ import io
 from backend.db import get_db
 from backend.schemas.roc_schemas import ROCAnalysisSchema, ROCAnalysisCreate, ROCMetricsResponse
 from backend.services.roc_analysis_service import (
-    process_dataframe, create_roc_analysis, compute_confusion_matrix
+    process_dataframe, create_roc_analysis, find_column_by_suffix,
 )
 from backend.repositories.roc_analysis_repository import (
     get_roc_analysis, get_all_roc_analyses, get_closest_confusion_matrix, delete_roc_analysis,get_or_create_confusion_matrix
@@ -18,8 +18,9 @@ logger = logging.getLogger(__name__)
 
 router = APIRouter()
 
-@router.post("/upload-data", response_model=ROCAnalysisSchema)
+@router.post("/analyses/{analysis_id}/upload-data", response_model=ROCAnalysisSchema)
 async def upload_data(
+    analysis_id: int,
     file: UploadFile = File(...),
     name: str = Form(...),
     description: Optional[str] = Form(None),
@@ -33,15 +34,22 @@ async def upload_data(
         df = pd.read_csv(pd.io.common.BytesIO(contents))
         processed_df = process_dataframe(df)
         
-        # Extract true labels and predicted probabilities
-        true_labels = processed_df['Full.Text.Incl/Excl'].map({
-            'EXTRACTED': 1, 'Include': 1, 1: 1
-        }).fillna(0).astype(int).values
+        # Find the adjusted confidence column dynamically by suffix
+        adjusted_conf_column = find_column_by_suffix(processed_df, '_confidence_adjusted')
+
+        if not adjusted_conf_column:
+            raise ValueError("Could not find a column with suffix '_confidence_adjusted' in the processed dataframe")
         
-        predicted_probs = processed_df['prediction_conf'].values
+        # Extract true labels and predicted probabilities from the processed dataframe
+        true_labels = processed_df['Extracted'].map({
+            'EXTRACTED': 1, 'Include': 1, 1: 1
+            }).fillna(0).astype(int).values
+        
+        predicted_probs = processed_df[adjusted_conf_column].values
         
         # Create ROC analysis
         roc_analysis = create_roc_analysis(
+            id=analysis_id,
             name=name,
             description=description,
             true_labels=true_labels,
@@ -54,6 +62,37 @@ async def upload_data(
         
     except Exception as e:
         raise HTTPException(status_code=400, detail=f"Error processing file: {str(e)}")
+    
+@router.get("/analyses-status/{analysis_id}")
+def get_analysis_status(
+    analysis_id: int,
+    db: Session = Depends(get_db)
+):
+    """
+    Get the status of an analysis.
+    """
+    logger.info(f"Getting analysis status for ID: {analysis_id}")
+    analysis = get_roc_analysis(db, analysis_id)
+    
+    # Instead of raising a 404, return a valid response indicating the analysis doesn't exist
+    if not analysis:
+        logger.info(f"Analysis with ID {analysis_id} not found")
+        return {
+            "analysis_id": analysis_id,
+            "exists": False,
+            "has_roc_data": False,
+            "has_confusion_matrix": False
+        }
+    
+    # Analysis exists, return its status with the correct attribute names
+    status_response = {
+        "analysis_id": analysis_id,
+        "exists": True,
+        "has_roc_data": bool(getattr(analysis, 'roc_curve_data', None) and len(analysis.roc_curve_data) > 0),
+        "has_confusion_matrix": bool(getattr(analysis, 'confusion_matrices', None) and len(analysis.confusion_matrices) > 0)
+    }
+    logger.info(f"Analysis status: {status_response}")
+    return status_response
 
 @router.get("/analyses", response_model=List[ROCAnalysisSchema])
 def get_analyses(
