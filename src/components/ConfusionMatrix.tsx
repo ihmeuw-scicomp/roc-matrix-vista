@@ -8,9 +8,15 @@ import {
   Box,
   Paper,
   Grid,
+  Skeleton
 } from "@mui/material";
 import { green, red } from "@mui/material/colors";
 import { ConfusionMatrixData } from "@/types";
+import { 
+  processConfusionMatrixData, 
+  getConfusionMatrixCellColor, 
+  getTextColorForCell 
+} from "@/lib/utils";
 
 interface ConfusionMatrixProps {
   data: ConfusionMatrixData;
@@ -18,42 +24,72 @@ interface ConfusionMatrixProps {
   isLoading?: boolean;
 }
 
+/**
+ * Matrix cell component for confusion matrix
+ */
+const MatrixCell: React.FC<{
+  label: string;
+  count: number;
+  percent: number;
+  type: string;
+}> = ({ label, count, percent, type }) => {
+  return (
+    <Box
+      flex={1}
+      border={1}
+      borderColor="divider"
+      p={2}
+      textAlign="center"
+      sx={{ backgroundColor: getConfusionMatrixCellColor(type, percent) }}
+    >
+      <Typography variant="body2" sx={{ color: getTextColorForCell(percent) }}>
+        {label}
+      </Typography>
+      <Typography variant="h4" sx={{ color: getTextColorForCell(percent) }}>
+        {count}
+      </Typography>
+      <Typography variant="caption" sx={{ color: getTextColorForCell(percent) }}>
+        {percent}%
+      </Typography>
+    </Box>
+  );
+};
+
+/**
+ * Metric display component for showing evaluation metrics
+ */
+const MetricDisplay: React.FC<{
+  label: string;
+  value: string;
+}> = ({ label, value }) => {
+  return (
+    <Box sx={{ flex: 1 }}>
+      <Paper variant="outlined" sx={{ p: 1.5, textAlign: "center" }}>
+        <Typography variant="caption" color="text.secondary">{label}</Typography>
+        <Typography variant="h6">{value}%</Typography>
+      </Paper>
+    </Box>
+  );
+};
+
 const ConfusionMatrix: React.FC<ConfusionMatrixProps> = ({
   data,
   className,
   isLoading = false,
 }) => {
-  const TP = data.true_positives;
-  const FP = data.false_positives;
-  const TN = data.true_negatives;
-  const FN = data.false_negatives;
-  const total = TP + FP + TN + FN;
-
-  const tpPercent = Math.round((TP / total) * 100);
-  const fnPercent = Math.round((FN / total) * 100);
-  const fpPercent = Math.round((FP / total) * 100);
-  const tnPercent = Math.round((TN / total) * 100);
-
-  const accuracy = (data.accuracy * 100).toFixed(1);
-  const precision = (data.precision * 100).toFixed(1);
-  const recall = (data.recall * 100).toFixed(1); 
-  const f1Score  = (data.f1_score * 100).toFixed(1);
-
-  // For debugging/logging purposes
-  // console.log("Current threshold:", data.threshold, "Recall:", data.recall);
-
-  const shades = ['50', '100', '200', '300', '400', '500', '600', '700', '800', '900'];
-
-  const getBackgroundColor = (type: string, percent: number) => {
-    const index = Math.min(Math.floor(percent / 10), 9);
-    const shade = shades[index];
-    return type === 'TP' || type === 'TN' ? green[shade] : red[shade];
-  };
-
-  const getTextColor = (percent: number) => {
-    const index = Math.min(Math.floor(percent / 10), 9);
-    return index <= 4 ? 'text.primary' : 'common.white';
-  };
+  // Process data once to get all derived values
+  const processedData = processConfusionMatrixData(data);
+  
+  if (isLoading) {
+    return (
+      <Card className={className}>
+        <CardHeader title={<Skeleton variant="text" width="60%" />} />
+        <CardContent>
+          <Skeleton variant="rectangular" height={300} />
+        </CardContent>
+      </Card>
+    );
+  }
 
   return (
     <Card className={className} sx={{ overflow: "hidden", transition: "all 0.3s" }}>
@@ -61,148 +97,85 @@ const ConfusionMatrix: React.FC<ConfusionMatrixProps> = ({
         title={
           <>
             <Typography variant="h6">Confusion Matrix</Typography>
-            <Typography variant="caption">Threshold: {data.threshold}</Typography>
+            <Typography variant="caption">Threshold: {processedData.threshold}</Typography>
           </>
         }
         sx={{ pb: 1 }}
       />
       <CardContent>
-        <Box sx={{ opacity: isLoading ? 0.5 : 1, transition: "opacity 0.3s" }}>
-          <Paper variant="outlined" sx={{ p: 2, mb: 2 }}>
-            {/* Predicted Labels */}
-            <Box display="flex" alignItems="center" mb={2}>
-              <Box width={100} />
-              <Box flex={1} textAlign="center">
-                <Typography variant="subtitle2">Predicted Positive</Typography>
-              </Box>
-              <Box flex={1} textAlign="center">
-                <Typography variant="subtitle2">Predicted Negative</Typography>
-              </Box>
+        <Paper variant="outlined" sx={{ p: 2, mb: 2 }}>
+          {/* Predicted Labels */}
+          <Box display="flex" alignItems="center" mb={2}>
+            <Box width={100} />
+            <Box flex={1} textAlign="center">
+              <Typography variant="subtitle2">Predicted Positive</Typography>
             </Box>
-            {/* Actual Positive Row */}
-            <Box display="flex" width="100%" mb={2}>
-              <Box
-                width={100}
-                display="flex"
-                alignItems="center"
-                justifyContent="center"
-                sx={{ transform: "rotate(-90deg)" }}
-              >
-                <Typography variant="subtitle2">Actual Positive</Typography>
-              </Box>
-              <Box
-                flex={1}
-                border={1}
-                borderColor="divider"
-                p={2}
-                textAlign="center"
-                sx={{ backgroundColor: getBackgroundColor('TP', tpPercent) }}
-              >
-                <Typography variant="body2" sx={{ color: getTextColor(tpPercent) }}>
-                  True Positive
-                </Typography>
-                <Typography variant="h4" sx={{ color: getTextColor(tpPercent) }}>
-                  {TP}
-                </Typography>
-                <Typography variant="caption" sx={{ color: getTextColor(tpPercent) }}>
-                  {tpPercent}%
-                </Typography>
-              </Box>
-              <Box
-                flex={1}
-                border={1}
-                borderColor="divider"
-                p={2}
-                textAlign="center"
-                sx={{ backgroundColor: getBackgroundColor('FN', fnPercent) }}
-              >
-                <Typography variant="body2" sx={{ color: getTextColor(fnPercent) }}>
-                  False Negative
-                </Typography>
-                <Typography variant="h4" sx={{ color: getTextColor(fnPercent) }}>
-                  {FN}
-                </Typography>
-                <Typography variant="caption" sx={{ color: getTextColor(fnPercent) }}>
-                  {fnPercent}%
-                </Typography>
-              </Box>
+            <Box flex={1} textAlign="center">
+              <Typography variant="subtitle2">Predicted Negative</Typography>
             </Box>
-            {/* Actual Negative Row */}
-            <Box display="flex" width="100%">
-              <Box
-                width={100}
-                display="flex"
-                alignItems="center"
-                justifyContent="center"
-                sx={{ transform: "rotate(-90deg)" }}
-              >
-                <Typography variant="subtitle2">Actual Negative</Typography>
-              </Box>
-              <Box
-                flex={1}
-                border={1}
-                borderColor="divider"
-                p={2}
-                textAlign="center"
-                sx={{ backgroundColor: getBackgroundColor('FP', fpPercent) }}
-              >
-                <Typography variant="body2" sx={{ color: getTextColor(fpPercent) }}>
-                  False Positive
-                </Typography>
-                <Typography variant="h4" sx={{ color: getTextColor(fpPercent) }}>
-                  {FP}
-                </Typography>
-                <Typography variant="caption" sx={{ color: getTextColor(fpPercent) }}>
-                  {fpPercent}%
-                </Typography>
-              </Box>
-              <Box
-                flex={1}
-                border={1}
-                borderColor="divider"
-                p={2}
-                textAlign="center"
-                sx={{ backgroundColor: getBackgroundColor('TN', tnPercent) }}
-              >
-                <Typography variant="body2" sx={{ color: getTextColor(tnPercent) }}>
-                  True Negative
-                </Typography>
-                <Typography variant="h4" sx={{ color: getTextColor(tnPercent) }}>
-                  {TN}
-                </Typography>
-                <Typography variant="caption" sx={{ color: getTextColor(tnPercent) }}>
-                  {tnPercent}%
-                </Typography>
-              </Box>
+          </Box>
+          
+          {/* Actual Positive Row */}
+          <Box display="flex" width="100%" mb={2}>
+            <Box
+              width={100}
+              display="flex"
+              alignItems="center"
+              justifyContent="center"
+              sx={{ transform: "rotate(-90deg)" }}
+            >
+              <Typography variant="subtitle2">Actual Positive</Typography>
             </Box>
-          </Paper>
-          <Grid container spacing={2}>
-            <Box sx={{ flex: 1 }}>
-              <Paper variant="outlined" sx={{ p: 1.5, textAlign: "center" }}>
-                <Typography variant="caption" color="text.secondary">Accuracy</Typography>
-                <Typography variant="h6">{accuracy}%</Typography>
-              </Paper>
+            
+            <MatrixCell 
+              label="True Positive" 
+              count={processedData.true_positives} 
+              percent={processedData.tpPercent} 
+              type="TP" 
+            />
+            
+            <MatrixCell 
+              label="False Negative" 
+              count={processedData.false_negatives} 
+              percent={processedData.fnPercent} 
+              type="FN" 
+            />
+          </Box>
+          
+          {/* Actual Negative Row */}
+          <Box display="flex" width="100%">
+            <Box
+              width={100}
+              display="flex"
+              alignItems="center"
+              justifyContent="center"
+              sx={{ transform: "rotate(-90deg)" }}
+            >
+              <Typography variant="subtitle2">Actual Negative</Typography>
             </Box>
-            <Box sx={{ flex: 1 }}>
-              <Paper variant="outlined" sx={{ p: 1.5, textAlign: "center" }}>
-                <Typography variant="caption" color="text.secondary">Precision</Typography>
-                <Typography variant="h6">{precision}%</Typography>
-              </Paper>
-            </Box>
-            <Box sx={{ flex: 1 }}>
-              <Paper variant="outlined" sx={{ p: 1.5, textAlign: "center" }}>
-                <Typography variant="caption" color="text.secondary">Recall</Typography>
-                <Typography variant="h6">{recall}%</Typography>
-              </Paper>
-            </Box>
-            <Box sx={{ flex: 1 }}>
-              <Paper variant="outlined" sx={{ p: 1.5, textAlign: "center" }}>
-                <Typography variant="caption" color="text.secondary">F1 Score</Typography>
-                <Typography variant="h6">{f1Score}%</Typography>
-              </Paper>
-            </Box>
-          </Grid>
-        </Box>
+            
+            <MatrixCell 
+              label="False Positive" 
+              count={processedData.false_positives} 
+              percent={processedData.fpPercent} 
+              type="FP" 
+            />
+            
+            <MatrixCell 
+              label="True Negative" 
+              count={processedData.true_negatives} 
+              percent={processedData.tnPercent} 
+              type="TN" 
+            />
+          </Box>
+        </Paper>
+        
+        <Grid container spacing={2}>
+          <MetricDisplay label="Accuracy" value={processedData.accuracyFormatted} />
+          <MetricDisplay label="Precision" value={processedData.precisionFormatted} />
+          <MetricDisplay label="Recall" value={processedData.recallFormatted} />
+          <MetricDisplay label="F1 Score" value={processedData.f1ScoreFormatted} />
+        </Grid>
       </CardContent>
     </Card>
   );

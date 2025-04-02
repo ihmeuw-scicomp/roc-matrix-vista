@@ -4,17 +4,18 @@ import pandas as pd
 import numpy as np
 from typing import List, Optional
 import io
+import logging
 
 from backend.db import get_db
 from backend.schemas.roc_schemas import ROCAnalysisSchema, ROCAnalysisCreate, ROCMetricsResponse
-from backend.services.extended_metrics_service import (get_extended_metrics)
+from backend.services.extended_metrics_service import get_extended_metrics
 from backend.services.roc_analysis_service import (
     process_dataframe, create_roc_analysis, find_column_by_suffix,
 )
 from backend.repositories.roc_analysis_repository import (
-    get_roc_analysis, get_all_roc_analyses, get_closest_confusion_matrix, delete_roc_analysis,get_or_create_confusion_matrix
+    get_roc_analysis, get_all_roc_analyses, get_closest_confusion_matrix, delete_roc_analysis, get_or_create_confusion_matrix
 )
-import logging
+
 logger = logging.getLogger(__name__)
 
 router = APIRouter()
@@ -30,9 +31,11 @@ async def upload_data(
 ):
     """Upload a CSV file and create a new ROC analysis"""
     try:
-        # Read and process CSV
+        # Read and validate the file
         contents = await file.read()
         df = pd.read_csv(pd.io.common.BytesIO(contents))
+        
+        # Process the dataframe using the service
         processed_df = process_dataframe(df)
         
         # Find the adjusted confidence column dynamically by suffix
@@ -55,7 +58,7 @@ async def upload_data(
         # Extract predictions for unlabeled data
         unlabeled_predictions = unlabeled_df[adjusted_conf_column].values.tolist() if not unlabeled_df.empty else []
         
-        # Create ROC analysis
+        # Create ROC analysis using the service
         roc_analysis = create_roc_analysis(
             id=analysis_id,
             name=name,
@@ -70,6 +73,7 @@ async def upload_data(
         return roc_analysis
         
     except Exception as e:
+        logger.error(f"Error processing file: {str(e)}")
         raise HTTPException(status_code=400, detail=f"Error processing file: {str(e)}")
     
 @router.get("/analyses-status/{analysis_id}")
@@ -80,6 +84,7 @@ def get_analysis_status(
     """
     Get the status of an analysis.
     """
+    # Use repository function to get analysis
     analysis = get_roc_analysis(db, analysis_id)
     
     # Instead of raising a 404, return a valid response indicating the analysis doesn't exist
@@ -92,7 +97,7 @@ def get_analysis_status(
             "has_confusion_matrix": False
         }
     
-    # Analysis exists, return its status with the correct attribute names
+    # Analysis exists, return its status
     status_response = {
         "analysis_id": analysis_id,
         "exists": True,
@@ -108,6 +113,7 @@ def get_analyses(
     db: Session = Depends(get_db)
 ):
     """Get all ROC analyses"""
+    # Use repository function directly
     return get_all_roc_analyses(db, skip, limit)
 
 @router.get("/analyses/{analysis_id}", response_model=ROCAnalysisSchema)
@@ -116,6 +122,7 @@ def get_analysis(
     db: Session = Depends(get_db)
 ):
     """Get a specific ROC analysis"""
+    # Use repository function to get analysis
     analysis = get_roc_analysis(db, analysis_id)
     if analysis is None:
         raise HTTPException(status_code=404, detail="Analysis not found")
@@ -127,13 +134,13 @@ def get_metrics(
     threshold: float = Query(0.5, ge=0.0, le=1.0),
     db: Session = Depends(get_db)
 ):
-    
     """Get metrics for a specific ROC analysis at a given threshold"""
+    # Use repository function to get analysis
     analysis = get_roc_analysis(db, analysis_id)
     if analysis is None:
         raise HTTPException(status_code=404, detail="Analysis not found")
     
-    # Get confusion matrix for this threshold (or closest)
+    # Get confusion matrix using repository function
     confusion_matrix = get_or_create_confusion_matrix(db, analysis_id, threshold)
     if confusion_matrix is None:
         raise HTTPException(status_code=404, detail="No confusion matrix found")
@@ -179,6 +186,7 @@ def delete_analysis(
     db: Session = Depends(get_db)
 ):
     """Delete a ROC analysis"""
+    # Use repository function to delete analysis
     success = delete_roc_analysis(db, analysis_id)
     if not success:
         raise HTTPException(status_code=404, detail="Analysis not found")
@@ -198,17 +206,22 @@ async def create_new_analysis(
     try:
         # Read CSV file
         content = await file.read()
-        df = pd.read_csv(io.StringIO(content.decode('utf-8')))
+        df = pd.read_csv(pd.io.common.BytesIO(content))
         
-        # Process data
-        if not true_label_col in df.columns or not pred_prob_col in df.columns:
-            raise HTTPException(status_code=400, detail="Specified columns not found in CSV")
+        # Validate required columns
+        if true_label_col not in df.columns:
+            raise HTTPException(status_code=400, detail=f"True label column '{true_label_col}' not found in CSV")
+        if pred_prob_col not in df.columns:
+            raise HTTPException(status_code=400, detail=f"Prediction probability column '{pred_prob_col}' not found in CSV")
         
-        # Extract true labels and predicted probabilities
-        true_labels = df[true_label_col].values.astype(np.int32)
-        pred_probs = df[pred_prob_col].values.astype(np.float32)
+        # Extract data
+        true_labels = df[true_label_col].map({
+            'EXTRACTED': 1, 'Include': 1, 'True': 1, 'Yes': 1, 1: 1, '1': 1
+        }).fillna(0).astype(int).values.tolist()
         
-        # Create ROC analysis
+        pred_probs = df[pred_prob_col].astype(float).values.tolist()
+        
+        # Create ROC analysis using the service
         roc_analysis = create_roc_analysis(
             name=name,
             description=description,
@@ -220,25 +233,31 @@ async def create_new_analysis(
         
         return {
             "id": roc_analysis.id,
-            "name": roc_analysis.name, 
+            "name": roc_analysis.name,
             "auc_score": roc_analysis.auc_score
         }
-    
+        
+    except HTTPException as e:
+        # Re-raise HTTP exceptions
+        raise e
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Error processing file: {str(e)}")
+        logger.error(f"Error creating analysis: {str(e)}")
+        raise HTTPException(status_code=400, detail=f"Error creating analysis: {str(e)}")
+
 @router.get("/analyses/{analysis_id}/extended-metrics")
-def read_extended_metrics(
+def get_extended_metrics_endpoint(
     analysis_id: str,
-    threshold: float = 0.5,
+    threshold: float = Query(..., ge=0.0, le=1.0, description="Classification threshold"),
     db: Session = Depends(get_db)
 ):
-    """Get extended metrics for a ROC analysis at a specified threshold."""
-    logger.info(f"Getting extended metrics for analysis {analysis_id} at threshold {threshold}")
-    extended_metrics = get_extended_metrics(db, analysis_id, threshold)
-    if not extended_metrics:
-        raise HTTPException(status_code=404, detail="Extended metrics not found")
-    return extended_metrics
-
+    """
+    Get extended metrics for a given ROC analysis at the specified threshold.
+    """
+    # Call service function to get extended metrics
+    result = get_extended_metrics(db, analysis_id, threshold)
+    if not result:
+        raise HTTPException(status_code=404, detail=f"Could not retrieve extended metrics for analysis {analysis_id}")
+    return result
 
 @router.get("/roc-analysis/{analysis_id}/confusion-matrices")
 def get_confusion_matrices(analysis_id: int, db: Session = Depends(get_db)):

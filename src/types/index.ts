@@ -41,9 +41,16 @@ export interface WorkloadEstimation {
   total_articles: number;
 }
 
+export interface ValidationMetrics {
+  tpr: number;
+  precision: number;
+  labeled_count: number;
+}
+
 export interface ExtendedMetricsResponse {
   distribution_data: DistributionBin[];
   workload_estimation: WorkloadEstimation;
+  validation_metrics: ValidationMetrics;
   threshold: number;
   analysis_id: string;
 }

@@ -1,7 +1,7 @@
 """Add unlabeled_predictions column
 
 Revision ID: b3bc2a22b90c
-Revises: 
+Revises: 01_add_raw_data_to_roc_analysis
 Create Date: 2025-04-02 13:34:29.919094
 
 """
@@ -16,7 +16,7 @@ import os
 
 # revision identifiers, used by Alembic.
 revision: str = 'b3bc2a22b90c'
-down_revision: Union[str, None] = None
+down_revision: Union[str, None] = '01_add_raw_data_to_roc_analysis'
 branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
 

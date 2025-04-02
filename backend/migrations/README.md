@@ -1,15 +1,36 @@
 # Database Migrations
 
-This project uses Alembic for database migrations. Alembic is a lightweight database migration tool for SQLAlchemy.
+This directory contains database migrations for the application using Alembic.
+
+## Migration History
+
+The migrations should be applied in the following order:
+
+1. `01_add_raw_data_to_roc_analysis.py` - Adds columns for storing raw data (true_labels, predicted_probs)
+2. `b3bc2a22b90c_add_unlabeled_predictions_column.py` - Adds the unlabeled_predictions column and creates tables if they don't exist
 
 ## Running Migrations
 
-To apply all pending migrations:
+To run migrations:
 
 ```bash
-cd /path/to/backend
+# Navigate to the backend directory
+cd backend
+
+# Apply all migrations
 alembic upgrade head
+
+# Generate a new migration (after changing models)
+alembic revision --autogenerate -m "Description of changes"
 ```
+
+## Troubleshooting
+
+If you encounter issues with migrations:
+
+1. Check the current database version: `alembic current`
+2. View migration history: `alembic history`
+3. If needed, stamp the database with a specific version: `alembic stamp <revision_id>`
 
 ## Creating New Migrations
 

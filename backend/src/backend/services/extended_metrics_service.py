@@ -7,6 +7,7 @@ from backend.models.extended_metrics import DistributionBin, WorkloadEstimation,
 from backend.models.roc_data import ROCAnalysis
 from backend.repositories.roc_analysis_repository import get_roc_analysis
 from sqlalchemy.orm import Session
+from backend.services.metrics_utils import get_validation_metrics
 
 logger = logging.getLogger(__name__)
 
@@ -29,36 +30,6 @@ def calculate_bins(probabilities: np.ndarray, num_bins: int = 20) -> List[Distri
         bins.append(bin_data)
     
     return bins
-
-def get_validation_metrics(labeled_probs: np.ndarray, true_labels: np.ndarray, threshold: float) -> Tuple[float, float]:
-    """
-    Calculate validation metrics (TPR, precision) from labeled data at the given threshold.
-    
-    Args:
-        labeled_probs: Array of predicted probabilities for labeled data
-        true_labels: Array of true labels (1 = included, 0 = excluded)
-        threshold: Classification threshold
-    
-    Returns:
-        Tuple of (tpr, precision)
-    """
-    if len(labeled_probs) == 0 or len(true_labels) == 0:
-        logger.warning("No labeled data available for validation metrics")
-        return 0.5, 0.5  # Default values if no labeled data
-        
-    # Apply threshold to get binary predictions
-    predictions = labeled_probs >= threshold
-    
-    # Calculate true positive rate (recall) and precision
-    tp = np.sum((predictions == True) & (true_labels == 1))
-    fp = np.sum((predictions == True) & (true_labels == 0))
-    fn = np.sum((predictions == False) & (true_labels == 1))
-    
-    # Avoid division by zero
-    tpr = tp / (tp + fn) if (tp + fn) > 0 else 0
-    precision = tp / (tp + fp) if (tp + fp) > 0 else 0
-    
-    return tpr, precision
 
 def calculate_workload_estimation(
     probabilities: np.ndarray, 
@@ -146,7 +117,7 @@ def get_extended_metrics(
         labeled_probs = np.array(analysis.predicted_probs) if analysis.predicted_probs else np.array([])
         true_labels = np.array(analysis.true_labels) if analysis.true_labels else np.array([])
         
-        # Calculate TPR and precision from labeled data
+        # Calculate TPR and precision from labeled data - using shared utility function
         tpr, precision = get_validation_metrics(labeled_probs, true_labels, threshold)
         
         # Create validation metrics object
