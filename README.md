@@ -1,4 +1,82 @@
-# Welcome to your Lovable project
+# ROC Matrix Vista
+
+A tool for interactive exploration of machine learning model performance through ROC curves, confusion matrices, and distribution visualization.
+
+## Project Structure
+
+```
+project_root/
+├── src/               # Frontend application code
+│   ├── components/    # React UI components
+│   ├── pages/         # Page components
+│   ├── services/      # API client services
+│   ├── types/         # TypeScript type definitions
+│   └── lib/           # Utility functions
+│
+├── backend/           # Backend Python server
+│   ├── src/backend/   # Main backend application
+│   ├── migrations/    # Database migrations
+│   └── alembic.ini    # Migration configuration
+│
+├── data/              # Sample data and test files
+│
+├── public/            # Static assets
+│
+└── package.json       # NPM package configuration
+```
+
+## Getting Started
+
+### Prerequisites
+
+- Node.js (>= 18.x)
+- Python (>= 3.10)
+- Poetry or pip for Python dependencies
+
+### Frontend Setup
+
+```bash
+# Install dependencies
+npm install
+
+# Start development server
+npm run dev
+```
+
+### Backend Setup
+
+```bash
+# Navigate to backend directory
+cd backend
+
+# Install dependencies using Poetry
+poetry install
+# OR using pip
+pip install -r requirements.txt
+
+# Set up environment variables
+cp .env.example .env
+# Edit .env with your configuration
+
+# Run migrations
+cd backend
+alembic upgrade head
+
+# Start the backend server
+python -m src.backend.main
+```
+
+## Features
+
+- Interactive ROC curve with adjustable decision threshold
+- Visual exploration of model performance metrics
+- Prediction score distribution visualization
+- Confusion matrix with real-time updates
+- Model performance metrics at different decision thresholds
+
+## Development
+
+See the [frontend README](src/README.md) and [backend README](backend/README.md) for more detailed information about each part of the application.
 
 ## Project info
 
