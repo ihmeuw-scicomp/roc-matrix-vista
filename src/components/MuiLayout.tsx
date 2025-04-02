@@ -1,4 +1,3 @@
-
 import React, { ReactNode } from "react";
 import { AppBar, Toolbar, Typography, Container, Box } from "@mui/material";
 
@@ -10,10 +9,24 @@ const MuiLayout: React.FC<LayoutProps> = ({ children }) => {
   return (
     <Box sx={{ display: "flex", flexDirection: "column", minHeight: "100vh" }}>
       <AppBar position="static" color="default" elevation={1}>
-        <Toolbar>
-          <Typography variant="h6" color="inherit" noWrap>
-            ROC Matrix Vista
-          </Typography>
+        <Toolbar sx={{ justifyContent: 'space-between' }}>
+          <Box sx={{ display: 'flex', alignItems: 'center' }}>
+            {/* Logo - Using placeholder.svg from public directory */}
+            <Box sx={{ mr: 2 }}>
+              <img src="/placeholder.svg" alt="Matrix Vista" width={32} height={32} />
+            </Box>
+            <Typography variant="h6" color="inherit" noWrap>
+              Matrix Vista
+            </Typography>
+          </Box>
+          <a
+            href="https://en.wikipedia.org/wiki/Receiver_operating_characteristic"
+            target="_blank"
+            rel="noopener noreferrer"
+            style={{ textDecoration: 'none', color: 'inherit' }}
+          >
+            Learn about ROC curves
+          </a>
         </Toolbar>
       </AppBar>
       

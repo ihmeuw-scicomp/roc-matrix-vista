@@ -1,12 +1,13 @@
-
 import React, { useEffect, useRef } from "react";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, Typography } from "@mui/material";
 import { cn } from "@/lib/utils";
 import { ROCPoint } from "@/types";
 
 interface ROCCurveProps {
   rocData: ROCPoint[];
   currentThreshold: number;
+  currentPoint?: { tpr: number; fpr: number };
+  onThresholdSelect?: (threshold: number) => void;
   className?: string;
   isLoading?: boolean;
 }
@@ -14,6 +15,8 @@ interface ROCCurveProps {
 const ROCCurve: React.FC<ROCCurveProps> = ({
   rocData,
   currentThreshold,
+  currentPoint,
+  onThresholdSelect,
   className,
   isLoading = false,
 }) => {
@@ -22,7 +25,7 @@ const ROCCurve: React.FC<ROCCurveProps> = ({
   useEffect(() => {
     // Dynamically import Plotly to avoid SSR issues
     const loadPlotly = async () => {
-      if (chartRef.current) {
+      if (chartRef.current && rocData.length > 0) {
         try {
           const Plotly = await import('plotly.js-dist-min');
           
@@ -31,7 +34,13 @@ const ROCCurve: React.FC<ROCCurveProps> = ({
             return Math.abs(curr.threshold - currentThreshold) < Math.abs(prev.threshold - currentThreshold) 
               ? curr 
               : prev;
-          });
+          }, rocData[0]);
+          
+          // Use either the provided currentPoint (from API) or the closest point from rocData
+          const pointToShow = currentPoint || { 
+            tpr: closestPoint.tpr, 
+            fpr: closestPoint.fpr 
+          };
           
           // Prepare data for the ROC curve
           const trace1 = {
@@ -69,8 +78,8 @@ const ROCCurve: React.FC<ROCCurveProps> = ({
           
           // Current threshold point marker
           const trace3 = {
-            x: [closestPoint.fpr],
-            y: [closestPoint.tpr],
+            x: [pointToShow.fpr],
+            y: [pointToShow.tpr],
             mode: 'markers',
             type: 'scatter',
             name: `Threshold: ${currentThreshold.toFixed(2)}`,
@@ -81,13 +90,12 @@ const ROCCurve: React.FC<ROCCurveProps> = ({
             hoverinfo: 'text',
             text: [
               `Threshold: ${currentThreshold.toFixed(2)}<br>` +
-              `True Positive Rate: ${closestPoint.tpr.toFixed(3)}<br>` +
-              `False Positive Rate: ${closestPoint.fpr.toFixed(3)}`
+              `True Positive Rate: ${pointToShow.tpr.toFixed(3)}<br>` +
+              `False Positive Rate: ${pointToShow.fpr.toFixed(3)}`
             ]
           };
           
           const data = [trace1, trace2, trace3];
-          
           const layout = {
             title: '',
             xaxis: {
@@ -110,8 +118,10 @@ const ROCCurve: React.FC<ROCCurveProps> = ({
             },
             showlegend: true,
             legend: {
-              x: 0.01,
-              y: 0.02,
+              x: 1,
+              y: 0,
+              xanchor: 'right',
+              yanchor: 'bottom',
               bgcolor: 'rgba(255, 255, 255, 0.7)',
               bordercolor: 'rgba(0, 0, 0, 0.1)',
               borderwidth: 1
@@ -120,7 +130,6 @@ const ROCCurve: React.FC<ROCCurveProps> = ({
             paper_bgcolor: 'rgba(0, 0, 0, 0)',
             hovermode: 'closest',
             shapes: [
-              // AUC fill
               {
                 type: 'path',
                 path: `M 0,0 ${trace1.x.map((x, i) => `L ${x},${trace1.y[i]}`).join(' ')} L 1,0 Z`,
@@ -130,22 +139,24 @@ const ROCCurve: React.FC<ROCCurveProps> = ({
             ],
             annotations: [
               {
-                x: 0.95,
-                y: 0.05,
-                xref: 'paper',
-                yref: 'paper',
-                text: `AUC: ${calculateAUC(rocData).toFixed(3)}`,
-                showarrow: false,
+                x: 0.5,                  // Centers the text horizontally (0.5 is the middle of the plot width)
+                y: 0.05,                 // Positions the text near the bottom (5% from the bottom edge)
+                xref: 'paper',           // References the x-coordinate to the plot's paper (entire plotting area)
+                yref: 'paper',           // References the y-coordinate to the plot's paper
+                text: `AUC: ${calculateAUC(rocData).toFixed(3)}`,  // The AUC text with calculated value
+                showarrow: false,        // No arrow, as we’re just placing text
+                xanchor: 'center',       // Anchors the text’s center at x: 0.5
+                yanchor: 'bottom',       // Anchors the text’s bottom at y: 0.05, so it extends upward
                 font: {
-                  family: 'Arial',
+                  family: 'Arial',       // Font styling
                   size: 14,
                   color: 'rgba(0, 0, 0, 0.7)'
                 },
-                bgcolor: 'rgba(255, 255, 255, 0.7)',
-                bordercolor: 'rgba(0, 0, 0, 0.1)',
-                borderwidth: 1,
-                borderpad: 4,
-                borderradius: 4
+                bgcolor: 'rgba(255, 255, 255, 0.7)',  // Background color with transparency
+                bordercolor: 'rgba(0, 0, 0, 0.1)',    // Border color
+                borderwidth: 1,                       // Border thickness
+                borderpad: 4,                         // Padding inside the border
+                borderradius: 4                       // Rounded border corners
               }
             ]
           };
@@ -170,10 +181,12 @@ const ROCCurve: React.FC<ROCCurveProps> = ({
     };
     
     loadPlotly();
-  }, [rocData, currentThreshold]);
+  }, [rocData, currentThreshold, currentPoint]);
   
   // Calculate Area Under Curve using trapezoidal rule
   function calculateAUC(rocPoints: ROCPoint[]): number {
+    if (!rocPoints.length) return 0;
+    
     let auc = 0;
     const sortedPoints = [...rocPoints].sort((a, b) => a.fpr - b.fpr);
     
@@ -187,17 +200,13 @@ const ROCCurve: React.FC<ROCCurveProps> = ({
   }
 
   return (
-    <Card className={cn("transition-custom animate-fade-up", className)}>
-      <CardHeader className="pb-2">
-        <CardTitle className="text-lg font-medium">ROC Curve</CardTitle>
-      </CardHeader>
+    <Card className={cn("fade-up", className)}>
+      <CardHeader title={<Typography variant="h6">ROC Curve</Typography>} />
       <CardContent>
         <div 
-          className={cn("transition-opacity duration-300 h-[400px]", {
-            "opacity-50": isLoading
-          })}
+          className={isLoading ? "chart-container loading" : "chart-container"}
         >
-          <div ref={chartRef} className="w-full h-full" />
+          <div ref={chartRef} style={{ width: '100%', height: '100%' }} />
         </div>
       </CardContent>
     </Card>

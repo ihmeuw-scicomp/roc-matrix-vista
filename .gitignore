@@ -22,3 +22,14 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+
+data/*
+repomix*
+backend/.env
+backend/test.db
+*.pyc
+
+# Python cache files
+__pycache__/
+*.py[cod]
+*$py.class

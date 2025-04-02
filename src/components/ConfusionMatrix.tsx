@@ -1,8 +1,22 @@
-
-import React from "react";
-import { Card, CardContent, CardHeader, Typography, Box, Paper, Stack } from "@mui/material";
-import Grid from "@mui/material/Grid";
+// import React from "react";
+import React, { useEffect } from "react";
+import {
+  Card,
+  CardContent,
+  CardHeader,
+  Typography,
+  Box,
+  Paper,
+  Grid,
+  Skeleton
+} from "@mui/material";
+import { green, red } from "@mui/material/colors";
 import { ConfusionMatrixData } from "@/types";
+import { 
+  processConfusionMatrixData, 
+  getConfusionMatrixCellColor, 
+  getTextColorForCell 
+} from "@/lib/utils";
 
 interface ConfusionMatrixProps {
   data: ConfusionMatrixData;
@@ -10,182 +24,158 @@ interface ConfusionMatrixProps {
   isLoading?: boolean;
 }
 
+/**
+ * Matrix cell component for confusion matrix
+ */
+const MatrixCell: React.FC<{
+  label: string;
+  count: number;
+  percent: number;
+  type: string;
+}> = ({ label, count, percent, type }) => {
+  return (
+    <Box
+      flex={1}
+      border={1}
+      borderColor="divider"
+      p={2}
+      textAlign="center"
+      sx={{ backgroundColor: getConfusionMatrixCellColor(type, percent) }}
+    >
+      <Typography variant="body2" sx={{ color: getTextColorForCell(percent) }}>
+        {label}
+      </Typography>
+      <Typography variant="h4" sx={{ color: getTextColorForCell(percent) }}>
+        {count}
+      </Typography>
+      <Typography variant="caption" sx={{ color: getTextColorForCell(percent) }}>
+        {percent}%
+      </Typography>
+    </Box>
+  );
+};
+
+/**
+ * Metric display component for showing evaluation metrics
+ */
+const MetricDisplay: React.FC<{
+  label: string;
+  value: string;
+}> = ({ label, value }) => {
+  return (
+    <Box sx={{ flex: 1 }}>
+      <Paper variant="outlined" sx={{ p: 1.5, textAlign: "center" }}>
+        <Typography variant="caption" color="text.secondary">{label}</Typography>
+        <Typography variant="h6">{value}%</Typography>
+      </Paper>
+    </Box>
+  );
+};
+
 const ConfusionMatrix: React.FC<ConfusionMatrixProps> = ({
   data,
   className,
   isLoading = false,
 }) => {
-  const { TP, FP, TN, FN } = data;
-  const total = TP + FP + TN + FN;
+  // Process data once to get all derived values
+  const processedData = processConfusionMatrixData(data);
   
-  // Calculate percentages for visual representation
-  const tpPercent = Math.round((TP / total) * 100);
-  const fpPercent = Math.round((FP / total) * 100);
-  const tnPercent = Math.round((TN / total) * 100);
-  const fnPercent = Math.round((FN / total) * 100);
-  
-  // Derived metrics
-  const accuracy = ((TP + TN) / total * 100).toFixed(1);
-  const precision = (TP / (TP + FP) * 100).toFixed(1);
-  const recall = (TP / (TP + FN) * 100).toFixed(1);
-  const f1Score = (2 * TP / (2 * TP + FP + FN) * 100).toFixed(1);
+  if (isLoading) {
+    return (
+      <Card className={className}>
+        <CardHeader title={<Skeleton variant="text" width="60%" />} />
+        <CardContent>
+          <Skeleton variant="rectangular" height={300} />
+        </CardContent>
+      </Card>
+    );
+  }
 
   return (
     <Card className={className} sx={{ overflow: "hidden", transition: "all 0.3s" }}>
-      <CardHeader 
-        title={<Typography variant="h6">Confusion Matrix</Typography>}
+      <CardHeader
+        title={
+          <>
+            <Typography variant="h6">Confusion Matrix</Typography>
+            <Typography variant="caption">Threshold: {processedData.threshold}</Typography>
+          </>
+        }
         sx={{ pb: 1 }}
       />
       <CardContent>
-        <Box sx={{ opacity: isLoading ? 0.5 : 1, transition: "opacity 0.3s" }}>
-          <Paper variant="outlined" sx={{ overflow: "hidden", mb: 2 }}>
-            {/* Header Row */}
-            <Grid container>
-              <Grid component="div" sx={{ width: "50%" }}></Grid>
-              <Grid component="div" container sx={{ width: "50%", bgcolor: "action.hover", py: 1 }}>
-                <Grid component="div" sx={{ width: "50%" }}>
-                  <Typography variant="caption" align="center">Predicted Positive</Typography>
-                </Grid>
-                <Grid component="div" sx={{ width: "50%" }}>
-                  <Typography variant="caption" align="center">Predicted Negative</Typography>
-                </Grid>
-              </Grid>
-              
-              {/* True Positive and False Negative */}
-              <Grid component="div" container sx={{ borderTop: 1, borderColor: "divider", width: "100%" }}>
-                <Grid component="div" sx={{ 
-                  width: "50%",
-                  bgcolor: "action.hover", 
-                  display: "flex", 
-                  alignItems: "center", 
-                  justifyContent: "center",
-                  position: "relative",
-                  height: 100
-                }}>
-                  <Typography 
-                    variant="caption" 
-                    sx={{ 
-                      transform: "rotate(-90deg)",
-                      whiteSpace: "nowrap",
-                      position: "absolute"
-                    }}
-                  >
-                    Actual Positive
-                  </Typography>
-                </Grid>
-                <Grid component="div" container sx={{ width: "50%" }}>
-                  <Grid component="div" sx={{ 
-                    width: "50%",
-                    p: 2, 
-                    borderLeft: 1, 
-                    borderRight: 1, 
-                    borderColor: "divider",
-                    display: "flex",
-                    flexDirection: "column",
-                    justifyContent: "space-between",
-                    alignItems: "center"
-                  }}>
-                    <Typography variant="body2">True Positive</Typography>
-                    <Typography variant="h4">{TP}</Typography>
-                    <Typography variant="caption" color="text.secondary">{tpPercent}%</Typography>
-                  </Grid>
-                  <Grid component="div" sx={{ 
-                    width: "50%",
-                    p: 2,
-                    display: "flex",
-                    flexDirection: "column",
-                    justifyContent: "space-between",
-                    alignItems: "center"
-                  }}>
-                    <Typography variant="body2">False Negative</Typography>
-                    <Typography variant="h4">{FN}</Typography>
-                    <Typography variant="caption" color="text.secondary">{fnPercent}%</Typography>
-                  </Grid>
-                </Grid>
-              </Grid>
-              
-              {/* False Positive and True Negative */}
-              <Grid component="div" container sx={{ borderTop: 1, borderColor: "divider", width: "100%" }}>
-                <Grid component="div" sx={{ 
-                  width: "50%",
-                  bgcolor: "action.hover", 
-                  display: "flex", 
-                  alignItems: "center", 
-                  justifyContent: "center",
-                  position: "relative",
-                  height: 100
-                }}>
-                  <Typography 
-                    variant="caption" 
-                    sx={{ 
-                      transform: "rotate(-90deg)",
-                      whiteSpace: "nowrap",
-                      position: "absolute"
-                    }}
-                  >
-                    Actual Negative
-                  </Typography>
-                </Grid>
-                <Grid component="div" container sx={{ width: "50%" }}>
-                  <Grid component="div" sx={{ 
-                    width: "50%",
-                    p: 2, 
-                    borderLeft: 1, 
-                    borderRight: 1, 
-                    borderColor: "divider",
-                    display: "flex",
-                    flexDirection: "column",
-                    justifyContent: "space-between",
-                    alignItems: "center"
-                  }}>
-                    <Typography variant="body2">False Positive</Typography>
-                    <Typography variant="h4">{FP}</Typography>
-                    <Typography variant="caption" color="text.secondary">{fpPercent}%</Typography>
-                  </Grid>
-                  <Grid component="div" sx={{ 
-                    width: "50%",
-                    p: 2,
-                    display: "flex",
-                    flexDirection: "column",
-                    justifyContent: "space-between",
-                    alignItems: "center"
-                  }}>
-                    <Typography variant="body2">True Negative</Typography>
-                    <Typography variant="h4">{TN}</Typography>
-                    <Typography variant="caption" color="text.secondary">{tnPercent}%</Typography>
-                  </Grid>
-                </Grid>
-              </Grid>
-            </Grid>
-          </Paper>
+        <Paper variant="outlined" sx={{ p: 2, mb: 2 }}>
+          {/* Predicted Labels */}
+          <Box display="flex" alignItems="center" mb={2}>
+            <Box width={100} />
+            <Box flex={1} textAlign="center">
+              <Typography variant="subtitle2">Predicted Positive</Typography>
+            </Box>
+            <Box flex={1} textAlign="center">
+              <Typography variant="subtitle2">Predicted Negative</Typography>
+            </Box>
+          </Box>
           
-          <Grid container spacing={2} sx={{ mt: 2 }}>
-            <Grid component="div" sx={{ width: "25%", padding: 1 }}>
-              <Paper variant="outlined" sx={{ p: 1.5 }}>
-                <Typography variant="caption" color="text.secondary">Accuracy</Typography>
-                <Typography variant="h6">{accuracy}%</Typography>
-              </Paper>
-            </Grid>
-            <Grid component="div" sx={{ width: "25%", padding: 1 }}>
-              <Paper variant="outlined" sx={{ p: 1.5 }}>
-                <Typography variant="caption" color="text.secondary">Precision</Typography>
-                <Typography variant="h6">{precision}%</Typography>
-              </Paper>
-            </Grid>
-            <Grid component="div" sx={{ width: "25%", padding: 1 }}>
-              <Paper variant="outlined" sx={{ p: 1.5 }}>
-                <Typography variant="caption" color="text.secondary">Recall</Typography>
-                <Typography variant="h6">{recall}%</Typography>
-              </Paper>
-            </Grid>
-            <Grid component="div" sx={{ width: "25%", padding: 1 }}>
-              <Paper variant="outlined" sx={{ p: 1.5 }}>
-                <Typography variant="caption" color="text.secondary">F1 Score</Typography>
-                <Typography variant="h6">{f1Score}%</Typography>
-              </Paper>
-            </Grid>
-          </Grid>
-        </Box>
+          {/* Actual Positive Row */}
+          <Box display="flex" width="100%" mb={2}>
+            <Box
+              width={100}
+              display="flex"
+              alignItems="center"
+              justifyContent="center"
+              sx={{ transform: "rotate(-90deg)" }}
+            >
+              <Typography variant="subtitle2">Actual Positive</Typography>
+            </Box>
+            
+            <MatrixCell 
+              label="True Positive" 
+              count={processedData.true_positives} 
+              percent={processedData.tpPercent} 
+              type="TP" 
+            />
+            
+            <MatrixCell 
+              label="False Negative" 
+              count={processedData.false_negatives} 
+              percent={processedData.fnPercent} 
+              type="FN" 
+            />
+          </Box>
+          
+          {/* Actual Negative Row */}
+          <Box display="flex" width="100%">
+            <Box
+              width={100}
+              display="flex"
+              alignItems="center"
+              justifyContent="center"
+              sx={{ transform: "rotate(-90deg)" }}
+            >
+              <Typography variant="subtitle2">Actual Negative</Typography>
+            </Box>
+            
+            <MatrixCell 
+              label="False Positive" 
+              count={processedData.false_positives} 
+              percent={processedData.fpPercent} 
+              type="FP" 
+            />
+            
+            <MatrixCell 
+              label="True Negative" 
+              count={processedData.true_negatives} 
+              percent={processedData.tnPercent} 
+              type="TN" 
+            />
+          </Box>
+        </Paper>
+        
+        <Grid container spacing={2}>
+          <MetricDisplay label="Accuracy" value={processedData.accuracyFormatted} />
+          <MetricDisplay label="Precision" value={processedData.precisionFormatted} />
+          <MetricDisplay label="Recall" value={processedData.recallFormatted} />
+          <MetricDisplay label="F1 Score" value={processedData.f1ScoreFormatted} />
+        </Grid>
       </CardContent>
     </Card>
   );
