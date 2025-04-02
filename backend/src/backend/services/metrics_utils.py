@@ -17,11 +17,11 @@ def compute_confusion_matrix(y_true: np.ndarray, y_score: np.ndarray, threshold:
     y_pred = (y_score >= threshold).astype(int)
     tn, fp, fn, tp = confusion_matrix(y_true, y_pred).ravel()
     
-    # Avoid division by zero
-    precision = tp / (tp + fp) if (tp + fp) > 0 else float('inf')
-    recall = tp / (tp + fn) if (tp + fn) > 0 else float('inf')
-    f1 = 2 * precision * recall / (precision + recall) if (precision + recall) > 0 else float('inf')
-    acc = (tp + tn) / (tp + tn + fp + fn) if (tp + tn + fp + fn) > 0 else float('inf')
+    # Avoid division by zero and infinite values
+    precision = tp / (tp + fp) if (tp + fp) > 0 else 0.0
+    recall = tp / (tp + fn) if (tp + fn) > 0 else 0.0
+    f1 = 2 * precision * recall / (precision + recall) if (precision + recall) > 0 else 0.0
+    acc = (tp + tn) / (tp + tn + fp + fn) if (tp + tn + fp + fn) > 0 else 0.0
     
     return {
         "true_positives": int(tp),

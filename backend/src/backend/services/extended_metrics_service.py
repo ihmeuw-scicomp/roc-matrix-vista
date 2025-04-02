@@ -120,15 +120,23 @@ def get_extended_metrics(
         # Calculate TPR and precision from labeled data - using shared utility function
         tpr, precision = get_validation_metrics(labeled_probs, true_labels, threshold)
         
-        # Create validation metrics object
+        # Ensure values are JSON-serializable (no infinity or NaN)
+        def safe_float(value):
+            try:
+                val = float(value)
+                return 0.0 if np.isinf(val) or np.isnan(val) else val
+            except:
+                return 0.0
+                
+        # Create validation metrics object with safe values
         validation_metrics = ValidationMetrics(
-            tpr=tpr,
-            precision=precision,
+            tpr=safe_float(tpr),
+            precision=safe_float(precision),
             labeled_count=len(labeled_probs)
         )
         
         # 2) Get distribution for unlabeled data
-        distribution_bins, workload = get_unlabeled_distribution(analysis, threshold, tpr, precision)
+        distribution_bins, workload = get_unlabeled_distribution(analysis, threshold, safe_float(tpr), safe_float(precision))
         
         if not distribution_bins or not workload:
             logger.warning(f"Could not calculate distribution or workload for analysis {analysis_id}")

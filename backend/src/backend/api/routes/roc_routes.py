@@ -157,24 +157,40 @@ def get_metrics(
         min(roc_points, key=lambda p: abs(p["threshold"] - threshold))
     )
     
-    # Handle infinite values by replacing with None to make JSON serializable
+    # Handle any potential infinite values in the response to ensure JSON serialization works
+    # We'll replace any infinite values with 0 for safety
+    def safe_float(value):
+        try:
+            val = float(value)
+            return 0.0 if np.isinf(val) or np.isnan(val) else val
+        except:
+            return 0.0
+    
+    # Create the response with safe values
     response_data = {
-        "threshold": float(confusion_matrix.threshold),
-        "roc_curve": roc_points,
+        "threshold": safe_float(confusion_matrix.threshold),
+        "roc_curve": [
+            {
+                "threshold": safe_float(point["threshold"]),
+                "tpr": safe_float(point["tpr"]),
+                "fpr": safe_float(point["fpr"])
+            }
+            for point in roc_points
+        ],
         "confusion_matrix": {
-            "threshold": float(confusion_matrix.threshold),
+            "threshold": safe_float(confusion_matrix.threshold),
             "true_positives": confusion_matrix.true_positives,
             "false_positives": confusion_matrix.false_positives,
             "true_negatives": confusion_matrix.true_negatives,
             "false_negatives": confusion_matrix.false_negatives,
-            "precision": None if np.isinf(confusion_matrix.precision) else float(confusion_matrix.precision),
-            "recall": None if np.isinf(confusion_matrix.recall) else float(confusion_matrix.recall),
-            "f1_score": None if np.isinf(confusion_matrix.f1_score) else float(confusion_matrix.f1_score),
-            "accuracy": None if np.isinf(confusion_matrix.accuracy) else float(confusion_matrix.accuracy)
+            "precision": safe_float(confusion_matrix.precision),
+            "recall": safe_float(confusion_matrix.recall),
+            "f1_score": safe_float(confusion_matrix.f1_score),
+            "accuracy": safe_float(confusion_matrix.accuracy)
         },
         "current_metrics": {
-            "tpr": None if np.isinf(current_point["tpr"]) else float(current_point["tpr"]),
-            "fpr": None if np.isinf(current_point["fpr"]) else float(current_point["fpr"])
+            "tpr": safe_float(current_point["tpr"]),
+            "fpr": safe_float(current_point["fpr"])
         }
     }
     
