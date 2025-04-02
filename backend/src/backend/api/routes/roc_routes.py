@@ -7,6 +7,7 @@ import io
 
 from backend.db import get_db
 from backend.schemas.roc_schemas import ROCAnalysisSchema, ROCAnalysisCreate, ROCMetricsResponse
+from backend.services.extended_metrics_service import (get_extended_metrics)
 from backend.services.roc_analysis_service import (
     process_dataframe, create_roc_analysis, find_column_by_suffix,
 )
@@ -71,7 +72,6 @@ def get_analysis_status(
     """
     Get the status of an analysis.
     """
-    logger.info(f"Getting analysis status for ID: {analysis_id}")
     analysis = get_roc_analysis(db, analysis_id)
     
     # Instead of raising a 404, return a valid response indicating the analysis doesn't exist
@@ -91,7 +91,6 @@ def get_analysis_status(
         "has_roc_data": bool(getattr(analysis, 'roc_curve_data', None) and len(analysis.roc_curve_data) > 0),
         "has_confusion_matrix": bool(getattr(analysis, 'confusion_matrices', None) and len(analysis.confusion_matrices) > 0)
     }
-    logger.info(f"Analysis status: {status_response}")
     return status_response
 
 @router.get("/analyses", response_model=List[ROCAnalysisSchema])
@@ -219,6 +218,19 @@ async def create_new_analysis(
     
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error processing file: {str(e)}")
+@router.get("/analyses/{analysis_id}/extended-metrics")
+def read_extended_metrics(
+    analysis_id: str,
+    threshold: float = 0.5,
+    db: Session = Depends(get_db)
+):
+    """Get extended metrics for a ROC analysis at a specified threshold."""
+    logger.info(f"Getting extended metrics for analysis {analysis_id} at threshold {threshold}")
+    extended_metrics = get_extended_metrics(db, analysis_id, threshold)
+    if not extended_metrics:
+        raise HTTPException(status_code=404, detail="Extended metrics not found")
+    return extended_metrics
+
 
 @router.get("/roc-analysis/{analysis_id}/confusion-matrices")
 def get_confusion_matrices(analysis_id: int, db: Session = Depends(get_db)):

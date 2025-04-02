@@ -5,8 +5,10 @@ import ROCCurve from "@/components/ROCCurve";
 import ConfusionMatrix from "@/components/ConfusionMatrix";
 import ThresholdSlider from "@/components/ThresholdSlider";
 import ThresholdInfo from "@/components/ThresholdInfo";
+import DistributionPlot from "@/components/DistributionPlot";
+import WorkloadSummary from "@/components/WorkloadSummary";
 import { Card, CardHeader, CardContent, Typography, Box, Grid } from "@mui/material";
-import { fetchMetrics, uploadData, getAnalysisStatus } from "@/services/api";
+import { fetchMetrics, uploadData, getAnalysisStatus, fetchExtendedMetrics } from "@/services/api";
 import { ConfusionMatrixData } from "@/types";
 
 const Index = () => {
@@ -55,6 +57,19 @@ const Index = () => {
     enabled: !!analysisId // Only run query when analysisId exists
   });
 
+  // Fetch extended metrics
+  const { 
+    data: extendedMetrics, 
+    isLoading: isExtendedMetricsLoading, 
+    isError: isExtendedMetricsError 
+  } = useQuery({
+    queryKey: ["extendedMetrics", analysisId, debouncedThreshold],
+    queryFn: () => analysisId ? fetchExtendedMetrics(analysisId, debouncedThreshold) : null,
+    staleTime: 60000,
+    refetchOnWindowFocus: false,
+    enabled: !!analysisId
+  });
+
   // Default empty matrix
   const emptyMatrix: ConfusionMatrixData = { 
     true_positives: 0, 
@@ -69,7 +84,7 @@ const Index = () => {
   };
 
   // Error state
-  if (isError) {
+  if (isError || isExtendedMetricsError) {
     return (
       <MuiLayout>
         <Box sx={{ p: 3, textAlign: "center" }}>
@@ -123,7 +138,7 @@ const Index = () => {
         </Box>
 
         {/* ROC Curve and Confusion Matrix Section */}
-        <Box sx={{ display: 'flex', flexDirection: { xs: 'column', md: 'row' }, gap: 3 }}>
+        <Box sx={{ display: 'flex', flexDirection: { xs: 'column', md: 'row' }, gap: 3, mb: 3 }}>
           <Box sx={{ flex: 1 }}>
             <ROCCurve
               rocData={data?.roc_curve || []}
@@ -139,6 +154,26 @@ const Index = () => {
               isLoading={isLoading}
             />
           </Box>
+        </Box>
+
+        {/* Distribution Plot - New */}
+        <Box sx={{ mb: 3 }}>
+          <DistributionPlot
+            distributionData={extendedMetrics?.distribution_data || []}
+            threshold={threshold}
+            loading={isExtendedMetricsLoading}
+            error={isExtendedMetricsError}
+          />
+        </Box>
+        
+        {/* Workload Summary - New */}
+        <Box>
+          <WorkloadSummary
+            workloadEstimation={extendedMetrics?.workload_estimation}
+            threshold={threshold}
+            loading={isExtendedMetricsLoading}
+            error={isExtendedMetricsError}
+          />
         </Box>
       </Box>
     </MuiLayout>

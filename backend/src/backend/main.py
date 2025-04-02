@@ -6,7 +6,7 @@ from sqlalchemy.orm import Session
 import logging 
 
 from backend.config import settings
-from backend.api.routes import roc_routes
+from backend.api.routes import roc_routes, extended_metrics
 from backend.db import engine, Base, get_db
 from backend.utils.logging_config import setup_logging
 from backend.services.roc_analysis_service import (
@@ -43,6 +43,7 @@ def startup():
 
 # Include routers
 app.include_router(roc_routes.router, prefix=settings.API_V1_STR)
+# app.include_router(extended_metrics.router, prefix=settings.API_V1_STR)
 
 @app.get("/")
 def root():

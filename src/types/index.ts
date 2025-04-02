@@ -25,3 +25,25 @@ export interface MetricsResponse {
     fpr: number;
   };
 }
+
+export interface DistributionBin {
+  bin_start: number;
+  bin_end: number;
+  count: number;
+}
+
+export interface WorkloadEstimation {
+  predicted_positives: number;
+  predicted_negatives: number;
+  expected_true_positives: number;
+  expected_false_positives: number;
+  expected_missed_relevant: number;
+  total_articles: number;
+}
+
+export interface ExtendedMetricsResponse {
+  distribution_data: DistributionBin[];
+  workload_estimation: WorkloadEstimation;
+  threshold: number;
+  analysis_id: string;
+}

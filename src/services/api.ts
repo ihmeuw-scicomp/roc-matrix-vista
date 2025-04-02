@@ -29,6 +29,36 @@ export const fetchMetrics = async (analysisId: number, threshold: number = 0.5):
   }
 };
 
+// export const fetchExtendedMetrics = async (analysisId: number, threshold: number) => {
+//   try {
+//     const response = await fetch(`/api/v1/analyses/${analysisId}/extended-metrics?threshold=${threshold}`);
+    
+//     if (!response.ok) {
+//       throw new Error(`Error fetching extended metrics: ${response.status}`);
+//     }
+    
+//     return await response.json();
+//   } catch (error) {
+//     console.error("Failed to fetch extended metrics:", error);
+//     throw error;
+//   }
+// };
+
+export const fetchExtendedMetrics = async (analysisId: number, threshold: number) => {
+  try {
+    // Use the apiClient to ensure the base URL is included
+    console.log("Fetching extended metrics for analysis ID:", analysisId);
+    const response = await apiClient.get(`/api/v1/analyses/${analysisId}/extended-metrics`, {
+      params: { threshold }
+    });
+    
+    return response.data;
+  } catch (error) {
+    console.error("Failed to fetch extended metrics:", error);
+    throw error;
+  }
+};
+
 export const uploadData = async (analysisId: number): Promise<{ id: number }> => {
   const formData = new FormData();
 
