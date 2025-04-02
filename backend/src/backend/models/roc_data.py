@@ -15,9 +15,10 @@ class ROCAnalysis(Base):
     roc_curve_data = Column(JSON, nullable=False)
     created_at = Column(DateTime, default=datetime.utcnow)
     
-    # New fields to store original data
-    true_labels = Column(JSON, nullable=True)
-    predicted_probs = Column(JSON, nullable=True)
+    # Fields to store original data
+    true_labels = Column(JSON, nullable=True)  # Only labeled data
+    predicted_probs = Column(JSON, nullable=True)  # Only for labeled data
+    unlabeled_predictions = Column(JSON, nullable=True)  # Only for unlabeled data
     
     confusion_matrices = relationship("ConfusionMatrix", back_populates="roc_analysis", cascade="all, delete")
 

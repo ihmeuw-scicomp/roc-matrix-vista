@@ -14,8 +14,15 @@ class WorkloadEstimation(BaseModel):
     expected_missed_relevant: int
     total_articles: int
 
+class ValidationMetrics(BaseModel):
+    """Metrics calculated from labeled data only"""
+    tpr: float
+    precision: float
+    labeled_count: int
+
 class ExtendedMetricsResponse(BaseModel):
     distribution_data: List[DistributionBin]
     workload_estimation: WorkloadEstimation
+    validation_metrics: ValidationMetrics
     threshold: float
     analysis_id: str

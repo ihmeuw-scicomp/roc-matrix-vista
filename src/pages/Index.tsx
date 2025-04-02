@@ -7,7 +7,7 @@ import ThresholdSlider from "@/components/ThresholdSlider";
 import ThresholdInfo from "@/components/ThresholdInfo";
 import DistributionPlot from "@/components/DistributionPlot";
 import WorkloadSummary from "@/components/WorkloadSummary";
-import { Card, CardHeader, CardContent, Typography, Box, Grid } from "@mui/material";
+import { Card, CardHeader, CardContent, Typography, Box, Grid, Alert } from "@mui/material";
 import { fetchMetrics, uploadData, getAnalysisStatus, fetchExtendedMetrics } from "@/services/api";
 import { ConfusionMatrixData } from "@/types";
 
@@ -48,8 +48,8 @@ const Index = () => {
     initializeAnalysis();
   }, []);
   
-  // Fetch data
-  const { data, isLoading, isError } = useQuery({
+  // Fetch data for ROC curve and confusion matrix (using labeled data)
+  const { data: metricsData, isLoading: isMetricsLoading, isError: isMetricsError } = useQuery({
     queryKey: ["metrics", analysisId, debouncedThreshold],
     queryFn: () => analysisId ? fetchMetrics(analysisId, debouncedThreshold) : null,
     staleTime: 60000,
@@ -57,7 +57,7 @@ const Index = () => {
     enabled: !!analysisId // Only run query when analysisId exists
   });
 
-  // Fetch extended metrics
+  // Fetch extended metrics for distribution and workload (using unlabeled data)
   const { 
     data: extendedMetrics, 
     isLoading: isExtendedMetricsLoading, 
@@ -84,7 +84,7 @@ const Index = () => {
   };
 
   // Error state
-  if (isError || isExtendedMetricsError) {
+  if (isMetricsError || isExtendedMetricsError) {
     return (
       <MuiLayout>
         <Box sx={{ p: 3, textAlign: "center" }}>
@@ -95,6 +95,17 @@ const Index = () => {
       </MuiLayout>
     );
   }
+
+  const distributionData = extendedMetrics?.distribution_data 
+  ? extendedMetrics.distribution_data.map(bin => {
+      const midpoint = (bin.bin_start + bin.bin_end) / 2;
+      return {
+        score: midpoint,
+        positives: midpoint >= threshold ? bin.count : 0,
+        negatives: midpoint < threshold ? bin.count : 0
+      };
+    })
+  : [];
 
   return (
     <MuiLayout>
@@ -112,6 +123,18 @@ const Index = () => {
             </Typography>
           </CardContent>
         </Card>
+
+        {/* Data Source Information */}
+        <Box sx={{ mb: 4 }}>
+          <Alert severity="info" sx={{ mb: 2 }}>
+            <Typography variant="body2">
+              <strong>ROC Curve & Confusion Matrix:</strong> Based on <strong>{extendedMetrics?.validation_metrics?.labeled_count || 0}</strong> labeled data points
+            </Typography>
+            <Typography variant="body2">
+              <strong>Distribution & Workload Estimation:</strong> Applied to <strong>{extendedMetrics?.workload_estimation?.total_articles || 0}</strong> unlabeled data points
+            </Typography>
+          </Alert>
+        </Box>
 
         {/* Threshold Adjustment Section */}
         <Box
@@ -131,42 +154,42 @@ const Index = () => {
           <Box sx={{ flex: 3 }}>
             <ThresholdInfo
               threshold={threshold}
-              tpr={data?.current_metrics?.tpr}
-              fpr={data?.current_metrics?.fpr}
+              tpr={metricsData?.current_metrics?.tpr}
+              fpr={metricsData?.current_metrics?.fpr}
             />
           </Box>
         </Box>
 
-        {/* ROC Curve and Confusion Matrix Section */}
+        {/* ROC Curve and Confusion Matrix Section - Using labeled data */}
         <Box sx={{ display: 'flex', flexDirection: { xs: 'column', md: 'row' }, gap: 3, mb: 3 }}>
           <Box sx={{ flex: 1 }}>
             <ROCCurve
-              rocData={data?.roc_curve || []}
+              rocData={metricsData?.roc_curve || []}
               currentThreshold={threshold}
-              currentPoint={data?.current_metrics}
+              currentPoint={metricsData?.current_metrics}
               onThresholdSelect={setThreshold}
-              isLoading={isLoading}
+              isLoading={isMetricsLoading}
             />
           </Box>
           <Box sx={{ flex: 1 }}>
             <ConfusionMatrix
-              data={data?.confusion_matrix || emptyMatrix}
-              isLoading={isLoading}
+              data={metricsData?.confusion_matrix || emptyMatrix}
+              isLoading={isMetricsLoading}
             />
           </Box>
         </Box>
 
-        {/* Distribution Plot - New */}
+        {/* Distribution Plot - Using unlabeled data */}
         <Box sx={{ mb: 3 }}>
           <DistributionPlot
-            distributionData={extendedMetrics?.distribution_data || []}
+            distributionData={distributionData}
             threshold={threshold}
             loading={isExtendedMetricsLoading}
             error={isExtendedMetricsError}
           />
         </Box>
         
-        {/* Workload Summary - New */}
+        {/* Workload Summary - Using unlabeled data with validation metrics for estimation */}
         <Box>
           <WorkloadSummary
             workloadEstimation={extendedMetrics?.workload_estimation}

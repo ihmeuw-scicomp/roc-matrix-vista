@@ -373,57 +373,83 @@ def calculate_roc_auc(y_true: np.ndarray, y_score: np.ndarray) -> Tuple[List[Dic
     
     return roc_points, float(roc_auc)
 
-# Update create_roc_analysis to use the new function
 def create_roc_analysis(
     name: str,
     description: str,
-    true_labels: np.ndarray,
-    predicted_probs: np.ndarray,
+    true_labels: List,
+    predicted_probs: List,
     default_threshold: float = 0.5,
+    unlabeled_predictions: List = None,
     id: Optional[int] = None,
     db: Session = None
 ) -> ROCAnalysis:
-    """Create and save a new ROC analysis with confusion matrices."""
-    if db is None:
-        db = next(get_db())
+    """
+    Create a new ROC analysis entry in the database.
     
-    # Use the combined function to get both ROC points and AUC score
-    roc_points, auc_score = calculate_roc_auc(true_labels, predicted_probs)
+    Args:
+        name: Name of the analysis
+        description: Description of the analysis
+        true_labels: True binary labels (1=positive, 0=negative) for labeled data
+        predicted_probs: Predicted probabilities for labeled data
+        default_threshold: Default threshold for classification
+        unlabeled_predictions: Predicted probabilities for unlabeled data
+        id: Optional ID if updating an existing analysis
+        db: SQLAlchemy database session
     
-    # Create ROC analysis object and store the raw data as lists
-    roc_analysis = ROCAnalysis(
-        id=id,
-        name=name,
-        description=description,
-        default_threshold=default_threshold,
-        roc_curve_data=roc_points,
-        auc_score=auc_score,
-        true_labels=true_labels.tolist(),  # Store original data for later use
-        predicted_probs=predicted_probs.tolist()
-    )
+    Returns:
+        Created or updated ROCAnalysis object
+    """
+    # Convert lists to numpy arrays for calculations
+    y_true = np.array(true_labels)
+    y_score = np.array(predicted_probs)
     
-    # Add to database
-    db.add(roc_analysis)
+    # Calculate ROC curve and AUC
+    roc_points, auc_score = calculate_roc_auc(y_true, y_score)
+    
+    # Create or update the ROC analysis
+    if id is not None:
+        # If ID is provided, check if it exists and update
+        roc_analysis = db.query(ROCAnalysis).filter(ROCAnalysis.id == id).first()
+        if roc_analysis:
+            roc_analysis.name = name
+            roc_analysis.description = description
+            roc_analysis.auc_score = auc_score
+            roc_analysis.default_threshold = default_threshold
+            roc_analysis.roc_curve_data = roc_points
+            roc_analysis.true_labels = true_labels
+            roc_analysis.predicted_probs = predicted_probs
+            roc_analysis.unlabeled_predictions = unlabeled_predictions if unlabeled_predictions else []
+        else:
+            # Create a new entry with the specified ID
+            roc_analysis = ROCAnalysis(
+                id=id,
+                name=name,
+                description=description,
+                auc_score=auc_score,
+                default_threshold=default_threshold,
+                roc_curve_data=roc_points,
+                true_labels=true_labels,
+                predicted_probs=predicted_probs,
+                unlabeled_predictions=unlabeled_predictions if unlabeled_predictions else []
+            )
+            db.add(roc_analysis)
+    else:
+        # Create a new entry with auto-generated ID
+        roc_analysis = ROCAnalysis(
+            name=name,
+            description=description,
+            auc_score=auc_score,
+            default_threshold=default_threshold,
+            roc_curve_data=roc_points,
+            true_labels=true_labels,
+            predicted_probs=predicted_probs,
+            unlabeled_predictions=unlabeled_predictions if unlabeled_predictions else []
+        )
+        db.add(roc_analysis)
+    
     db.commit()
     db.refresh(roc_analysis)
     
-    # Generate confusion matrices for important thresholds
-    thresholds = [0.1, 0.3, 0.5, 0.7, 0.9]
-    # Also include the default threshold if not in list
-    if default_threshold not in thresholds:
-        thresholds.append(default_threshold)
-        thresholds.sort()
-    
-    for threshold in thresholds:
-        cm_data = compute_confusion_matrix(true_labels, predicted_probs, threshold)
-        cm = ConfusionMatrix(
-            roc_analysis_id=roc_analysis.id,
-            threshold=threshold,
-            **cm_data
-        )
-        db.add(cm)
-    
-    db.commit()
     return roc_analysis
 
 def compute_confusion_matrix(y_true: np.ndarray, y_score: np.ndarray, threshold: float) -> Dict:

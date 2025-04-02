@@ -41,20 +41,28 @@ async def upload_data(
         if not adjusted_conf_column:
             raise ValueError("Could not find a column with suffix '_confidence_adjusted' in the processed dataframe")
         
-        # Extract true labels and predicted probabilities from the processed dataframe
-        true_labels = processed_df['Extracted'].map({
-            'EXTRACTED': 1, 'Include': 1, 1: 1
-            }).fillna(0).astype(int).values
+        # Split data into labeled and unlabeled sets
+        labeled_df = processed_df[processed_df['Extracted'].notna()].copy()
+        unlabeled_df = processed_df[processed_df['Extracted'].isna()].copy()
         
-        predicted_probs = processed_df[adjusted_conf_column].values
+        # Extract true labels and predicted probabilities from the labeled data
+        true_labels = labeled_df['Extracted'].map({
+            'EXTRACTED': 1, 'Include': 1, 1: 1
+        }).fillna(0).astype(int).values
+        
+        predicted_probs = labeled_df[adjusted_conf_column].values
+        
+        # Extract predictions for unlabeled data
+        unlabeled_predictions = unlabeled_df[adjusted_conf_column].values.tolist() if not unlabeled_df.empty else []
         
         # Create ROC analysis
         roc_analysis = create_roc_analysis(
             id=analysis_id,
             name=name,
             description=description,
-            true_labels=true_labels,
-            predicted_probs=predicted_probs,
+            true_labels=true_labels.tolist(),
+            predicted_probs=predicted_probs.tolist(),
+            unlabeled_predictions=unlabeled_predictions,
             default_threshold=default_threshold,
             db=db
         )
