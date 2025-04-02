@@ -23,7 +23,6 @@ dist-ssr
 *.sln
 *.sw?
 
-data/*
 repomix*
 backend/.env
 backend/test.db
@@ -33,3 +32,9 @@ backend/test.db
 __pycache__/
 *.py[cod]
 *$py.class
+
+backend/migrations/script.py.mako
+backend/poetry.lock
+backend/alembic.ini
+roc_data.db
+
